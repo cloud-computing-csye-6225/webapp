@@ -29,7 +29,9 @@ To run the application enter the following in the terminal
 ## Usage
 To check the application is functioning with proper health check use the following command  
 ``curl -vvvv http://localhost:8080/healthz``  
+
 It should return
 - **200 OK** : If application is connected to the database
 - **503 Service unavailable** : If the application fails to connect to the database
 - **405 Method Not allowed** : If the applcation places put, post, delete, fetch reqeusts or sends data with a payload
+
