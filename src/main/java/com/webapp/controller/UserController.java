@@ -56,4 +56,40 @@ public class UserController {
        }
 
     }
+    //  Get User
+    @GetMapping("/byId/{id}")
+    public ResponseEntity<UserDto> getUser(@PathVariable Long id) {
+        UserDto userDto = userService.getUser(id);
+        if (userDto == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
+        }
+        return ResponseEntity.status(HttpStatus.OK)
+                .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                .header(HttpHeaders.PRAGMA,"no-cache")
+                .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                .body(userDto);
+    }
+
+    // delete User
+    @DeleteMapping("/byId/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.status(HttpStatus.OK)
+                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
+        }
+    }
 }
