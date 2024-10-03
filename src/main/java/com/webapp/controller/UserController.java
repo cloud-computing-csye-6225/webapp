@@ -3,12 +3,10 @@ package com.webapp.controller;
 import com.webapp.dto.UserDto;
 import com.webapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,12 +19,41 @@ public class UserController {
     public ResponseEntity<Void> createUser(@RequestBody UserDto userDto){
         try{
             userService.createUser(userDto);
-            return new ResponseEntity<>(HttpStatus.CREATED);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
         }
         catch (IllegalArgumentException e){
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.status(HttpStatus.OK)
+                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
 
         }
     }
-    
+
+    //Update user
+    @PutMapping("/byId/{id}")
+    public ResponseEntity<Void> updateUser(@PathVariable Long id,@RequestBody UserDto userDto){
+       try{
+           userService.updateUser(id,userDto);
+           return ResponseEntity.status(HttpStatus.OK)
+                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                   .header(HttpHeaders.PRAGMA,"no-cache")
+                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                   .build();
+       }
+       catch (IllegalArgumentException e){
+           return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                   .header(HttpHeaders.PRAGMA,"no-cache")
+                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                   .build();
+
+       }
+
+    }
 }
