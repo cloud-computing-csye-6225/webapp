@@ -1,4 +1,5 @@
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/WebappApplication.java
+/Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/config/SwaggerConfig.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/controller/UserController.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/dto/UserDto.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/healthcheck/controller/HeathCheckController.java
