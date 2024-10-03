@@ -3,5 +3,6 @@ com/webapp/dto/UserDto.class
 com/webapp/repository/UserRepository.class
 com/webapp/healthcheck/controller/HeathCheckController.class
 com/webapp/WebappApplication.class
+com/webapp/config/SwaggerConfig.class
 com/webapp/controller/UserController.class
 com/webapp/model/User.class
