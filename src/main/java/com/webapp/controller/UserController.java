@@ -123,4 +123,14 @@ public class UserController {
                     .build();
         }
     }
+
+    @RequestMapping(method = {RequestMethod.PATCH,RequestMethod.HEAD,RequestMethod.OPTIONS})
+    public ResponseEntity<Void> handleInvalidMethods(){
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                .header(HttpHeaders.PRAGMA,"no-cache")
+                .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                .build();
+
+    }
 }
