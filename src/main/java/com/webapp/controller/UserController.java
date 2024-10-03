@@ -36,7 +36,7 @@ public class UserController {
                     .build();
         }
         catch (IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.OK)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
                     .header(HttpHeaders.PRAGMA,"no-cache")
                     .header("X_CONTENT_TYPE_OPTIONS", "nosniff")

@@ -1,4 +1,5 @@
 package com.webapp.dto;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +23,7 @@ public class UserDto {
     @Schema(description = "The user's password, which must be at least 6 characters", example = "password", required = true)
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
+    @JsonIgnore
     private String password;
     @Schema(description = "Timestamp of when the user account was created", example = "2024-10-02T 10:00:00")
     private LocalDateTime accountCreated;
