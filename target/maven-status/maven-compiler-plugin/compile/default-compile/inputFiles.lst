@@ -5,4 +5,5 @@
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/healthcheck/controller/HeathCheckController.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/model/User.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/repository/UserRepository.java
+/Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/security/SecurityConfig.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/service/UserService.java
