@@ -10,6 +10,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/users")
@@ -26,9 +28,21 @@ public class UserController {
     }
     )
     @PostMapping
-    public ResponseEntity<Void> createUser(@RequestBody UserDto userDto){
+    public ResponseEntity<Void> createUser(@RequestBody Map<String, Object> requestBody){
         try{
-            userService.createUser(userDto);
+            if(!isValidRequest(requestBody)){
+                throw new IllegalArgumentException("Improper Request");
+            }
+
+            String email = (String) requestBody.get("email");
+            String firstName = (String) requestBody.get("firstname");
+            String lastName = (String) requestBody.get("lastname");
+            String password = (String) requestBody.get("password");
+            if(email == null || firstName == null || lastName ==null || password ==null){
+                throw new IllegalArgumentException("Missing parameters");
+            }
+
+            userService.createUser(email,firstName,lastName,password);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
                     .header(HttpHeaders.PRAGMA,"no-cache")
@@ -37,6 +51,14 @@ public class UserController {
         }
         catch (IllegalArgumentException e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
+
+        }
+        catch (Exception e){
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
                     .header(HttpHeaders.PRAGMA,"no-cache")
                     .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
@@ -53,10 +75,19 @@ public class UserController {
 
     }
     )
-    @PutMapping("/byId/{id}")
-    public ResponseEntity<Void> updateUser(@PathVariable Long id,@RequestBody UserDto userDto){
+    @PutMapping()
+    public ResponseEntity<Void> updateUser(@RequestBody Map<String,Object> requestBody){
        try{
-           userService.updateUser(id,userDto);
+           if (!isValidRequest(requestBody)) {
+               throw new IllegalArgumentException();
+           }
+           String email = (String) requestBody.get("email");
+           String firstName = (String) requestBody.get("firstname");
+           String lastName = (String) requestBody.get("lastname");
+           String password = (String) requestBody.get("password");
+
+
+           userService.updateUser(email,firstName,lastName,password);
            return ResponseEntity.status(HttpStatus.OK)
                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
                    .header(HttpHeaders.PRAGMA,"no-cache")
@@ -65,6 +96,22 @@ public class UserController {
        }
        catch (IllegalArgumentException e){
            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                   .header(HttpHeaders.PRAGMA,"no-cache")
+                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                   .build();
+
+       }
+       catch (NoSuchElementException e){
+           return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
+                   .header(HttpHeaders.PRAGMA,"no-cache")
+                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                   .build();
+
+       }
+       catch (Exception e){
+           return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
                    .header(HttpHeaders.PRAGMA,"no-cache")
                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
@@ -81,21 +128,52 @@ public class UserController {
 
     }
     )
-    @GetMapping("/byId/{id}")
-    public ResponseEntity<UserDto> getUser(@PathVariable Long id) {
-        UserDto userDto = userService.getUser(id);
-        if (userDto == null) {
+    @GetMapping()
+    public ResponseEntity<UserDto> getUser(@RequestBody Map<String,Object> requestBody) {
+        try{
+        if (!isValidRequest(requestBody)) {
+            throw new IllegalArgumentException();
+        }
+
+        String email = (String) requestBody.get("email");
+        String firstName = (String) requestBody.get("firstname");
+        String lastName = (String) requestBody.get("lastname");
+
+        if (email == null || email.isEmpty()) {
+            throw new IllegalArgumentException();
+
+        }
+        UserDto foundUser = userService.getUser(email, firstName, lastName);
+        if (foundUser == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                    .header(HttpHeaders.PRAGMA,"no-cache")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
                     .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
                     .build();
         }
+
         return ResponseEntity.status(HttpStatus.OK)
-                .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                .header(HttpHeaders.PRAGMA,"no-cache")
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
                 .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                .body(userDto);
+                .body(foundUser);
+    }
+        catch (IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
+
+        }
+        catch (Exception e){
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
+                    .build();
+        }
+
     }
 
     // delete User
@@ -106,7 +184,7 @@ public class UserController {
 
     }
     )
-    @DeleteMapping("/byId/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         try {
             userService.deleteUser(id);
@@ -132,5 +210,14 @@ public class UserController {
                 .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
                 .build();
 
+    }
+
+    private boolean isValidRequest(Map<String,Object> requestBody){
+        for(String key: requestBody.keySet()){
+            if(!key.equals("email") && !key.equals("firstname") && !key.equals("lastname") && !key.equals("password")){
+                return false;
+            }
+        }
+        return true;
     }
 }

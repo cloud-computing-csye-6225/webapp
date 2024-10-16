@@ -2,6 +2,9 @@ package com.webapp.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,8 +14,10 @@ public class User {
     private long id;
 
     @Column(unique = true)
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
     private String email;
-    @JsonIgnore
+
     private String password;
     private String firstName;
     private String lastName;
