@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
@@ -22,65 +23,62 @@ public class UserService {
 
 
     // Create User method
-    public void createUser(UserDto userDto) {
-        logger.info("Checking if email exists {}",userDto.getEmail());
-        Optional<User> existingUser = userRepository.findByEmail(userDto.getEmail());
+    public void createUser(String email, String firstName, String lastName, String password) {
+        logger.info("Checking if email exists {}",email);
+        Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
-            logger.warn("Email {} already in use",userDto.getEmail());
+            logger.warn("Email {} already in use",email);
             throw new IllegalArgumentException("Email is already in use");
         }
 
         User user = new User();
-        user.setEmail(userDto.getEmail());
-        user.setFirstName(userDto.getFirstName());
-        user.setLastName(userDto.getLastName());
-        user.setPassword(userDto.getPassword());
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setPassword(password);
         user.setAccountCreated(LocalDateTime.now());
         user.setAccountUpdated(LocalDateTime.now());
-
         userRepository.save(user);
     }
 
     // Update User method
-    public void updateUser(Long id, UserDto userDto) {
-        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+    public void updateUser(String email, String firstName, String lastName, String password) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new NoSuchElementException());
 
-        if (userDto.getEmail() != null) {
-            throw new IllegalArgumentException("Email cannot be updated");
-        }
-        if (userDto.getAccountCreated() != null || userDto.getAccountUpdated() != null) {
-            throw new IllegalArgumentException("Account created/updated timestamps cannot be modified");
-        }
-        if (userDto.getFirstName() != null) {
-            user.setFirstName(userDto.getFirstName());
-        }
-        if (userDto.getLastName() != null) {
-            user.setLastName(userDto.getLastName());
-        }
-        if (userDto.getPassword() != null) {
-            user.setPassword(userDto.getPassword());
-        }
 
+        if (firstName != null || !firstName.isEmpty()) {
+            user.setFirstName(firstName);
+        }
+        if (lastName != null || !lastName.isEmpty() ) {
+            user.setLastName(lastName);
+        }
+        if (password!=null || !password.isEmpty()) {
+            user.setPassword(password);
+        }
         user.setAccountUpdated(LocalDateTime.now());
         userRepository.save(user);
     }
 
     // Get user method
-    public UserDto getUser(Long id) {
-        User user = userRepository.findById(id).orElse(null);
-        if (user == null) {
-            return null;
+    public UserDto getUser(String email, String firstName, String lastName) {
+        Optional<User> user = userRepository.findByEmailandOtherFeilds(email, firstName, lastName);
+        if (user.isPresent()) {
+            return convertToDto(user.get());
+        }
+        return null;
+    }
+
+        private UserDto convertToDto(User user){
+            UserDto userDto = new UserDto();
+            userDto.setEmail(user.getEmail());
+            userDto.setFirstName(user.getFirstName());
+            userDto.setLastName(user.getLastName());
+            userDto.setAccountCreated(user.getAccountCreated());
+            userDto.setAccountUpdated(user.getAccountUpdated());
+            return userDto;
         }
 
-        UserDto userDto = new UserDto();
-        userDto.setEmail(user.getEmail());
-        userDto.setFirstName(user.getFirstName());
-        userDto.setLastName(user.getLastName());
-        userDto.setAccountCreated(user.getAccountCreated());
-        userDto.setAccountUpdated(user.getAccountUpdated());
 
-        return userDto;
-    }
 
     // Delete User method
     public void deleteUser(Long id) {
