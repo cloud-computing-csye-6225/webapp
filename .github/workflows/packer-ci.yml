@@ -1,11 +1,12 @@
 name: Java Maven Build & Packer Validation
 
 on:
-  push:
-    branches: 
-      - main
   pull_request:
-    branches: 
+    branches:
+      - main
+
+  push:
+    branches:
       - main
 
 jobs:
@@ -23,7 +24,39 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # Set up MySQL
+      - name: Set up MySQL
+        uses: shogo82148/actions-setup-mysql@v1
+        with:
+          mysql-version: "8.0"
+          root-password: ${{ secrets.MYSQL_PASSWORD }}
+
+      # Create a database using the name stored in secrets
+      - name: Create MySQL Database
+        run: mysql -uroot -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
+
+      # Maven build with environment variables for MySQL connection
       - name: Build with Maven
+        env:
+          # Database connection
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: 'root'
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          
+          # Spring specific properties
+          SPRING_APPLICATION_NAME: 'webapp'
+          SPRING_DATASOURCE_URL: 'jdbc:mysql://${{ env.MYSQL_HOST }}:${{ env.MYSQL_PORT }}/{{ secrets.MYSQL_DB }}'
+          SPRING_DATASOURCE_USERNAME: ${{ env.MYSQL_USER }}
+          SPRING_DATASOURCE_PASSWORD: ${{ env.MYSQL_PASSWORD }}
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: 'com.mysql.cj.jdbc.Driver'
+          
+          # Hibernate settings
+          SPRING_JPA_HIBERNATE_DDL_AUTO: 'update'
+          SPRING_JPA_SHOW_SQL: 'true'
+          SPRING_JPA_OPEN_IN_VIEW: 'false'
+
         run: mvn -B package --file pom.xml
 
       - name: Upload JAR artifact
