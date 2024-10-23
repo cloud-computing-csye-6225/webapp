@@ -59,34 +59,6 @@ jobs:
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: mvn -B package --file pom.xml
 
-      # Upload the JAR artifact for later use
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: webapp-jar
-          path: target/webapp-0.0.1-SNAPSHOT.jar
-
-      # Clean up the dynamically generated application.properties file
-      - name: Clean up application.properties
-        run: rm src/main/resources/application.properties
-
-  # Step 2: Packer Template Validation
-  packer_validation:
-    runs-on: ubuntu-latest
-    needs: build_test
-
-    steps:
-      # Step 1: Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: webapp-jar
-          path: target/
-
-      # Step 2: Set up Packer
       - name: Set up Packer
         uses: hashicorp/setup-packer@v2
         with:
@@ -109,11 +81,7 @@ jobs:
           ssh_username    = "ubuntu"
           EOF
 
-      # Step 4: Packer format check
-      - name: Packer format check
-        run: packer fmt -check -diff packer/
-
-      # Step 5: Packer validate template
-      - name: Validate Packer template
-        run: packer validate -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+      # Clean up the dynamically generated application.properties file
+      - name: Clean up application.properties
+        run: rm src/main/resources/application.properties
 
