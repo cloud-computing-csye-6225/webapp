@@ -7,6 +7,7 @@ packer {
   }
 }
 
+# Variables declaration (left as is)
 variable "aws_region" {
   type    = string
   default = "us-east-1"
@@ -74,38 +75,37 @@ source "amazon-ebs" "my-ami" {
   }
 }
 
-# Provisioning steps
+# Build and provisioning block
 build {
   sources = ["source.amazon-ebs.my-ami"]
 
+  # Initial setup script
   provisioner "shell" {
     script = "${path.root}/../scripts/initial_setup.sh"
   }
 
-  # Ensure the csye6225 user is created
+  provisioner "shell" {
+    script = "${path.root}/../scripts/db_setup.sh"
+  }
+
+  # Ensure csye6225 user exists
   provisioner "shell" {
     inline = [
       "sudo useradd -m -s /usr/sbin/nologin csye6225 || true"
     ]
   }
 
-  # Ensure the home directory exists and is owned by csye6225
+  # Create necessary directories and set permissions
   provisioner "shell" {
     inline = [
       "sudo mkdir -p /home/csye6225",
-      "sudo chown csye6225:csye6225 /home/csye6225"
-    ]
-  }
-
-  # Ensure the /opt/webapp directory exists before uploading the JAR file
-  provisioner "shell" {
-    inline = [
+      "sudo chown csye6225:csye6225 /home/csye6225",
       "sudo mkdir -p /opt/webapp",
       "sudo chown csye6225:csye6225 /opt/webapp"
     ]
   }
 
-  # Upload the JAR file to the /opt/webapp directory
+  # Upload the JAR file
   provisioner "file" {
     source      = "${path.root}/../target/webapp-0.0.1-SNAPSHOT.jar"
     destination = "/opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
@@ -120,13 +120,13 @@ build {
     ]
   }
 
-  # Upload the application.properties file to the /opt/webapp directory
+  # Upload the application.properties file
   provisioner "file" {
     source      = "${path.root}/../src/main/resources/application.properties"
     destination = "/opt/webapp/application.properties"
   }
 
-  # Set ownership and permissions for the properties file
+  # Set ownership and permissions for application.properties
   provisioner "shell" {
     inline = [
       "sudo chown csye6225:csye6225 /opt/webapp/application.properties",
@@ -134,13 +134,13 @@ build {
     ]
   }
 
-  # Upload the webapp service file to a temporary location
+  # Upload the systemd service file
   provisioner "file" {
     source      = "${path.root}/../scripts/webapp.service"
     destination = "/tmp/webapp.service"
   }
 
-  # Move the service file to /etc/systemd/system and set ownership and permissions
+  # Move the service file and set permissions
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service",
@@ -149,7 +149,7 @@ build {
     ]
   }
 
-  # Reload the systemd daemon and enable/start the service
+  # Reload systemd and start the web app service
   provisioner "shell" {
     inline = [
       "sudo systemctl daemon-reload",
@@ -157,6 +157,4 @@ build {
       "sudo systemctl start webapp.service"
     ]
   }
-
 }
-

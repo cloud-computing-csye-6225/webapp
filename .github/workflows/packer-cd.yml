@@ -43,17 +43,10 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
-      # Move files to the correct location for Packer
-      - name: Move files to expected locations
-        run: |
-          mkdir -p webapp/target webapp/src/main/resources
-          mv target/webapp-0.0.1-SNAPSHOT.jar webapp/target/webapp-0.0.1-SNAPSHOT.jar
-          mv src/main/resources/application.properties webapp/src/main/resources/application.properties
-
       # Optional: Debugging step to verify file locations
-      - name: List contents of webapp directory
+      - name: List contents of target directory
         run: |
-          ls -R webapp/
+          ls -R target/
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2

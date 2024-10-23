@@ -23,17 +23,28 @@ sudo apt-get install -y mysql-server
 sudo systemctl enable mysql
 sudo systemctl start mysql
 
-# Log into MySQL as root and set the password
-sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'Qwaszx12345!';"
-sudo mysql -e "FLUSH PRIVILEGES;"
+# MySQL root password (ensure the environment variable MYSQL_PASSWORD is set beforehand)
+MYSQL_PASSWORD="${MYSQL_PASSWORD}"
 
-# Create a test database and table
-sudo mysql -e "CREATE DATABASE mysql_test;"
-sudo mysql -e "USE mysql_test;"
-sudo mysql -e "CREATE TABLE table1 (id INT, name VARCHAR(45));"
-sudo mysql -e "INSERT INTO table1 VALUES(1, 'Virat'), (2, 'Sachin'), (3, 'Dhoni'), (4, 'ABD');"
-sudo mysql -e "SELECT * FROM table1;"
-sudo mysql -e "EXIT;"
+# Switch the authentication method for root to mysql_native_password and set the password
+sudo mysql <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PASSWORD}';
+FLUSH PRIVILEGES;
+EOF
 
-echo "Database setup and test complete!"
+# Test if the password change was successful by logging in with the new root credentials
+if mysql -u root -p"${MYSQL_PASSWORD}" -e "exit"; then
+    echo "Root password successfully changed!"
+else
+    echo "Failed to change root password."
+    exit 1
+fi
+
+# Create a test database using the new root credentials
+sudo mysql -u root -p"${MYSQL_PASSWORD}" <<EOF
+CREATE DATABASE user_db;
+USE user_db;
+EOF
+
+echo "Database setup complete!"
 exit 0
