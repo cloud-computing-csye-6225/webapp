@@ -43,6 +43,17 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
+      # Move files to the correct location for Packer
+      - name: Move files to expected locations
+        run: |
+          mkdir -p webapp/target webapp/src/main/resources
+          mv target/webapp-0.0.1-SNAPSHOT.jar webapp/target/webapp-0.0.1-SNAPSHOT.jar
+          mv src/main/resources/application.properties webapp/src/main/resources/application.properties
+
+      # Optional: Debugging step to verify file locations
+      - name: List contents of webapp directory
+        run: |
+          ls -R webapp/
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -55,13 +66,6 @@ jobs:
         uses: hashicorp/setup-packer@v2
         with:
           version: latest
-
-      # Move files to the correct location for Packer
-      - name: Move files to expected locations
-        run: |
-          mkdir -p packer/target packer/src/main/resources
-          mv target/webapp-0.0.1-SNAPSHOT.jar packer/target/webapp-0.0.1-SNAPSHOT.jar
-          mv src/main/resources/application.properties packer/src/main/resources/application.properties
 
       - name: Packer Init
         run: packer init packer/packer.pkr.hcl
