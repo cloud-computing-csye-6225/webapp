@@ -6,8 +6,7 @@ on:
       - main
 
 jobs:
-  # Step 1: Run Integration Tests and Build Artifact
-  build_artifact:
+  build_and_create_ami:
     runs-on: ubuntu-latest
 
     steps:
@@ -44,22 +43,6 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
-      - name: Upload JAR and properties as artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: webapp-artifacts
-          path: |
-            target/webapp-0.0.1-SNAPSHOT.jar
-            src/main/resources/application.properties
-
-  # Step 2: Packer Image Creation
-  create_ami:
-    runs-on: ubuntu-latest
-    needs: build_artifact
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -73,18 +56,12 @@ jobs:
         with:
           version: latest
 
-      - name: Download webapp-artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: webapp-artifacts
-          path: packer/
-
       # Move files to the correct location for Packer
-      - name: Move downloaded files to expected locations
+      - name: Move files to expected locations
         run: |
           mkdir -p packer/target packer/src/main/resources
-          mv packer/webapp-0.0.1-SNAPSHOT.jar packer/target/webapp-0.0.1-SNAPSHOT.jar
-          mv packer/application.properties packer/src/main/resources/application.properties
+          mv target/webapp-0.0.1-SNAPSHOT.jar packer/target/webapp-0.0.1-SNAPSHOT.jar
+          mv src/main/resources/application.properties packer/src/main/resources/application.properties
 
       - name: Packer Init
         run: packer init packer/packer.pkr.hcl
