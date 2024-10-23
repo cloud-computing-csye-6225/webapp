@@ -1,7 +1,7 @@
-name: CI Pipeline for Testing Packer and Artifact Deployment
+name: CD Pipeline for Testing Packer and Artifact Deployment
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
