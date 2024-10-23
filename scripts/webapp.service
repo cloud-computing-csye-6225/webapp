@@ -1,0 +1,15 @@
+[Unit]
+Description=My Web Application
+After=network.target
+
+[Service]
+User=csye6225
+Group=csye6225
+WorkingDirectory=/opt/webapp
+ExecStart=/usr/bin/java -jar /opt/webapp/webapp-0.0.1-SNAPSHOT.jar
+SuccessExitStatus=143
+TimeoutStopSec=10
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
