@@ -34,7 +34,7 @@ variable "ssh_username" {
 
 variable "instance_type" {
   type    = string
-  default = "t2.micro"
+  default = "t2.small"
 }
 
 variable "vpc_id" {
@@ -82,12 +82,6 @@ build {
     script = "${path.root}/../scripts/initial_setup.sh"
   }
 
-  provisioner "shell" {
-    script       = "${path.root}/../scripts/db_setup.sh"
-    pause_before = "10s"
-  }
-
-
   # Ensure the csye6225 user is created
   provisioner "shell" {
     inline = [
@@ -100,6 +94,43 @@ build {
     inline = [
       "sudo mkdir -p /home/csye6225",
       "sudo chown csye6225:csye6225 /home/csye6225"
+    ]
+  }
+
+  # Ensure the /opt/webapp directory exists before uploading the JAR file
+  provisioner "shell" {
+    inline = [
+      "sudo mkdir -p /opt/webapp",
+      "sudo chown csye6225:csye6225 /opt/webapp"
+    ]
+  }
+
+  # Upload the JAR file to the /opt/webapp directory
+  provisioner "file" {
+    source      = "${path.root}/../target/webapp-0.0.1-SNAPSHOT.jar"
+    destination = "/opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
+    timeout     = "2m"
+  }
+
+  # Set ownership and permissions for the JAR file
+  provisioner "shell" {
+    inline = [
+      "sudo chown csye6225:csye6225 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
+      "sudo chmod 755 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
+    ]
+  }
+
+  # Upload the application.properties file to the /opt/webapp directory
+  provisioner "file" {
+    source      = "${path.root}/../src/main/resources/application.properties"
+    destination = "/opt/webapp/application.properties"
+  }
+
+  # Set ownership and permissions for the properties file
+  provisioner "shell" {
+    inline = [
+      "sudo chown csye6225:csye6225 /opt/webapp/application.properties",
+      "sudo chmod 755 /opt/webapp/application.properties"
     ]
   }
 
@@ -122,32 +153,10 @@ build {
   provisioner "shell" {
     inline = [
       "sudo systemctl daemon-reload",
-      "sudo systemctl unmask webapp.service",
       "sudo systemctl enable webapp.service",
       "sudo systemctl start webapp.service"
     ]
   }
 
-  # Ensure the /opt/webapp directory exists before uploading the JAR file
-  provisioner "shell" {
-    inline = [
-      "sudo mkdir -p /opt/webapp",
-      "sudo chown csye6225:csye6225 /opt/webapp"
-    ]
-  }
-
-  # Upload the JAR file to the /opt/webapp directory
-  provisioner "file" {
-    source      = "${path.root}/../target/webapp-0.0.1-SNAPSHOT.jar"
-    destination = "/opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
-  }
-
-  # Set ownership and permissions for the JAR file
-  provisioner "shell" {
-    inline = [
-      "sudo chown csye6225:csye6225 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
-      "sudo chmod 755 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
-    ]
-  }
-
 }
+

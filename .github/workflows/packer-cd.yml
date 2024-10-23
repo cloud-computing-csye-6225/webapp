@@ -1,0 +1,112 @@
+name: CD Pipeline with Packer and Artifact Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Step 1: Run Integration Tests and Build Artifact
+  build_artifact:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up JDK 17 for Maven build
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # Set up MySQL for testing the build
+      - name: Set up MySQL
+        uses: shogo82148/actions-setup-mysql@v1
+        with:
+          mysql-version: "8.0"
+          root-password: ${{ secrets.MYSQL_PASSWORD }}
+
+      # Create MySQL Database
+      - name: Create MySQL Database
+        run: mysql -uroot -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
+
+      # Create application.properties dynamically
+      - name: Create application.properties
+        run: |
+          mkdir -p src/main/resources 
+          echo "spring.datasource.url=jdbc:mysql://${{ secrets.MYSQL_HOST }}:${{ secrets.MYSQL_PORT }}/${{ secrets.MYSQL_DB }}" > src/main/resources/application.properties
+          echo "spring.datasource.username=root" >> src/main/resources/application.properties
+          echo "spring.datasource.password=${{ secrets.MYSQL_PASSWORD }}" >> src/main/resources/application.properties
+          echo "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver" >> src/main/resources/application.properties
+          echo "spring.jpa.hibernate.ddl-auto=update" >> src/main/resources/application.properties
+          echo "spring.jpa.show-sql=true" >> src/main/resources/application.properties
+          echo "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect" >> src/main/resources/application.properties
+
+      # Maven build to create the JAR artifact
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      # Upload the JAR artifact and the application.properties file
+      - name: Upload JAR and properties as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: webapp-artifacts
+          path: |
+            target/webapp-0.0.1-SNAPSHOT.jar
+            src/main/resources/application.properties
+
+  # Step 2: Packer Image Creation
+  create_ami:
+    runs-on: ubuntu-latest
+    needs: build_artifact
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Packer
+      - name: Set up Packer
+        uses: hashicorp/setup-packer@v2
+        with:
+          version: latest
+
+      # Download the built artifacts (JAR and properties file)
+      - name: Download webapp-artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: webapp-artifacts
+          path: packer/
+
+      # Initialize Packer
+      - name: Packer Init
+        run: packer init packer/packer.pkr.hcl
+
+      # Dynamically Create the `variables.pkr.hcl` File from Secrets
+      - name: Create Packer Variables File
+        run: |
+          timestamp=$(date +"%Y%m%d%H%M%S")
+          cat <<EOF > packer/variables.pkr.hcl
+          aws_region      = "${{ secrets.AWS_REGION }}"
+          ami_name        = "my-webapp-ami-${timestamp}"
+          ami_description = "AMI creation for Assignment 04"
+          instance_type   = "t2.small"
+          vpc_id          = "${{ secrets.VPC_ID }}"
+          subnet_id       = "${{ secrets.SUBNET_ID }}"
+          ssh_username    = "ubuntu"
+          EOF
+
+      # Validate the Packer template
+      - name: Validate Packer Template
+        run: packer validate -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+
+      # Build the AMI using Packer
+      - name: Build AMI with Packer
+        run: packer build -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+
+  # Step 3: Deployment (Optional)
+  # Add a step here for deployment after the AMI is created if needed.
