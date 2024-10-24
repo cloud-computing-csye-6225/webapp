@@ -28,12 +28,12 @@ MYSQL_PASSWORD="${MYSQL_PASSWORD}"
 
 # Switch the authentication method for root to mysql_native_password and set the password
 sudo mysql <<EOF
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_PASSWORD}';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'test1234';
 FLUSH PRIVILEGES;
 EOF
 
 # Test if the password change was successful by logging in with the new root credentials
-if mysql -u root -p"${MYSQL_PASSWORD}" -e "exit"; then
+if mysql -u root -p"test1234" -e "exit"; then
     echo "Root password successfully changed!"
 else
     echo "Failed to change root password."
@@ -41,7 +41,7 @@ else
 fi
 
 # Create a test database using the new root credentials
-sudo mysql -u root -p"${MYSQL_PASSWORD}" <<EOF
+sudo mysql -u root -p"test1234" <<EOF
 CREATE DATABASE user_db;
 USE user_db;
 EOF

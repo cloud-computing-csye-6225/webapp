@@ -1,7 +1,7 @@
 name: CD Pipeline for Testing Packer and Artifact Deployment
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 

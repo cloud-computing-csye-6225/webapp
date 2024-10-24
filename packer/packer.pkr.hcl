@@ -105,42 +105,44 @@ build {
     ]
   }
 
-  # Upload the JAR file
+  # Upload the JAR file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../target/webapp-0.0.1-SNAPSHOT.jar"
-    destination = "/opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
+    destination = "/tmp/webapp-0.0.1-SNAPSHOT.jar"
     timeout     = "2m"
   }
 
-  # Set ownership and permissions for the JAR file
+  # Move the JAR file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
+      "sudo mv /tmp/webapp-0.0.1-SNAPSHOT.jar /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
       "sudo chown csye6225:csye6225 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
       "sudo chmod 755 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
     ]
   }
 
-  # Upload the application.properties file
+  # Upload the application.properties file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../src/main/resources/application.properties"
-    destination = "/opt/webapp/application.properties"
+    destination = "/tmp/application.properties"
   }
 
-  # Set ownership and permissions for application.properties
+  # Move the application.properties file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
+      "sudo mv /tmp/application.properties /opt/webapp/application.properties",
       "sudo chown csye6225:csye6225 /opt/webapp/application.properties",
       "sudo chmod 755 /opt/webapp/application.properties"
     ]
   }
 
-  # Upload the systemd service file
+  # Upload the systemd service file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../scripts/webapp.service"
     destination = "/tmp/webapp.service"
   }
 
-  # Move the service file and set permissions
+  # Move the service file from /tmp to /etc/systemd/system
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service",
