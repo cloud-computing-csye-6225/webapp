@@ -25,9 +25,9 @@ jobs:
         with:
           mysql-version: "8.0"
           root-password: ${{ secrets.MYSQL_PASSWORD }}
+          user: ${{ secrets.MYSQL_USER }}
+          password: ${{ secrets.MYSQL_PASSWORD}}
 
-      - name: Create MySQL Database
-        run: mysql -uroot -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
 
       - name: Create application.properties
         run: |
@@ -61,23 +61,12 @@ jobs:
           version: latest
 
       - name: Packer Init
-        run: packer init packer/packer.pkr.hcl
-
-      - name: Create Packer Variables File
-        run: |
-          timestamp=$(date +"%Y%m%d%H%M%S")
-          cat <<EOF > packer/variables.pkr.hcl
-          aws_region      = "${{ secrets.AWS_REGION }}"
-          ami_name        = "my-webapp-ami-${timestamp}"
-          ami_description = "AMI creation for Assignment 04"
-          instance_type   = "t2.small"
-          vpc_id          = "${{ secrets.VPC_ID }}"
-          subnet_id       = "${{ secrets.SUBNET_ID }}"
-          ssh_username    = "ubuntu"
-          EOF
+        working-directory: ./packer
+        run: packer init .
 
       - name: Validate Packer Template
-        run: packer validate -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+        working-directory: ./packer
+        run: packer validate .
 
       - name: Build AMI with Packer
         run: packer build -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl

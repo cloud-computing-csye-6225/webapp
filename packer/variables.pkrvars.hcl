@@ -1,7 +1,0 @@
-aws_region      = "us-east-1"
-ami_name        = "my-webapp-ami-{{timestamp}}"
-ami_description = "AMI creation for Assignment 04"
-instance_type   = "t2.small"
-vpc_id          = "vpc-034519f344c97cec9"
-subnet_id       = "subnet-03c85a27d9152795e"
-ssh_username    = "ubuntu"

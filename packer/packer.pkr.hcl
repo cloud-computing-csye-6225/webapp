@@ -7,55 +7,23 @@ packer {
   }
 }
 
-# Variables declaration (left as is)
-variable "aws_region" {
-  type    = string
-  default = "us-east-1"
-}
-
-variable "ami_name" {
-  type    = string
-  default = "my-custom-ami"
-}
-
-variable "source_ami" {
-  type    = string
-  default = "ami-0866a3c8686eaeeba"
-}
-
-variable "ami_description" {
-  type    = string
-  default = "creating ami from CLI"
-}
-
-variable "ssh_username" {
-  type    = string
-  default = "ubuntu"
-}
-
-variable "instance_type" {
-  type    = string
-  default = "t2.small"
-}
-
-variable "vpc_id" {
-  type = string
-}
-
-variable "subnet_id" {
-  type = string
-}
-
 # Define the builder
 source "amazon-ebs" "my-ami" {
+  instance_type   = var.instance_type
   region          = var.aws_region
   ami_name        = var.ami_name
   ami_description = var.ami_description
-  ami_regions     = ["us-east-1"]
-  instance_type   = var.instance_type
+  source_ami      = var.source_ami
   ssh_username    = var.ssh_username
-  vpc_id          = var.vpc_id
   subnet_id       = var.subnet_id
+  ami_users       = var.ami_users
+
+
+    aws_polling {
+      delay_seconds = 100
+      max_attempts = 50
+    }
+
 
   launch_block_device_mappings {
     delete_on_termination = true
