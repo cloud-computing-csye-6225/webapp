@@ -28,6 +28,10 @@ jobs:
           user: ${{ secrets.MYSQL_USER }}
           password: ${{ secrets.MYSQL_PASSWORD}}
 
+      # Create a database using the name stored in secrets
+      - name: Create MySQL Database
+        run: mysql -u${{ secrets.MYSQL_USER}} -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
+
 
       - name: Create application.properties
         run: |

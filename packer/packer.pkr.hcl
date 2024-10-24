@@ -19,10 +19,10 @@ source "amazon-ebs" "my-ami" {
   ami_users       = var.ami_users
 
 
-    aws_polling {
-      delay_seconds = 100
-      max_attempts = 50
-    }
+  aws_polling {
+    delay_seconds = 100
+    max_attempts  = 50
+  }
 
 
   launch_block_device_mappings {

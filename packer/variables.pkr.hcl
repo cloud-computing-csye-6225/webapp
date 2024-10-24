@@ -13,7 +13,7 @@ variable "source_ami" {
   default = "ami-0866a3c8686eaeeba"
 }
 
-variable "ami_users"{
+variable "ami_users" {
   type    = list(string)
   default = ["816069136972"]
 }
@@ -35,6 +35,6 @@ variable "instance_type" {
 
 
 variable "subnet_id" {
-  type = string
-  default ="subnet-03c85a27d9152795e"
+  type    = string
+  default = "subnet-03c85a27d9152795e"
 }
