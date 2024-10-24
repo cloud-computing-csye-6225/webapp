@@ -12,6 +12,8 @@ on:
 jobs:
   # Step 1: Java Maven Build
   build_test:
+    name: ci status check
+    environment: development
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository code
