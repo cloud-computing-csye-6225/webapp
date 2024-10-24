@@ -1,5 +1,5 @@
 aws_region    = "us-east-1"
-ami_name      = "my-custom-ami ${formatdate("YYYY_MM_DD-HH_mm", timestamp())}"
+ami_name      = "my-custom-ami"
 source_ami    = "ami-0866a3c8686eaeeba"
 ami_users     = ["277707106636"]
 ssh_username  = "ubuntu"
