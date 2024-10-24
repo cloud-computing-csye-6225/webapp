@@ -7,6 +7,8 @@ on:
 
 jobs:
   build_and_create_ami:
+    name: depoly ami
+    environment: development
     runs-on: ubuntu-latest
 
     steps:
