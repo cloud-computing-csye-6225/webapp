@@ -73,4 +73,4 @@ jobs:
         run: packer validate .
 
       - name: Build AMI with Packer
-        run: packer build -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+        run: packer build -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl

@@ -67,7 +67,7 @@ jobs:
       - name: Initialise Packer
         run: packer init packer/packer.pkr.hcl
 
-      # Step 3: Dynamically Create the `variables.pkr.hcl` File from Secrets
+      # Step 3: Dynamically Create the `variables.pkrvars.hcl` File from Secrets
       - name: Create Packer Variables File with Timestamp
         run: |
           timestamp=$(date +"%Y%m%d%H%M%S")
@@ -87,7 +87,7 @@ jobs:
 
       # Step 5: Packer validate template
       - name: Validate Packer template
-        run: packer validate -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+        run: packer validate -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
 
 
       # Clean up the dynamically generated application.properties file
