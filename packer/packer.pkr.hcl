@@ -7,7 +7,6 @@ packer {
   }
 }
 
-# Variables declaration (left as is)
 variable "aws_region" {
   type    = string
   default = "us-east-1"
@@ -23,9 +22,14 @@ variable "source_ami" {
   default = "ami-0866a3c8686eaeeba"
 }
 
+variable "ami_users" {
+  type    = list(string)
+  default = ["816069136972"]
+}
+
 variable "ami_description" {
   type    = string
-  default = "creating ami from CLI"
+  default = "creating ami from CLI CSYE 6225"
 }
 
 variable "ssh_username" {
@@ -38,24 +42,28 @@ variable "instance_type" {
   default = "t2.small"
 }
 
-variable "vpc_id" {
-  type = string
-}
 
 variable "subnet_id" {
-  type = string
+  type    = string
+  default = "subnet-03c85a27d9152795e"
 }
 
 # Define the builder
 source "amazon-ebs" "my-ami" {
-  region          = var.aws_region
   ami_name        = var.ami_name
   ami_description = var.ami_description
-  ami_regions     = ["us-east-1"]
   instance_type   = var.instance_type
+  region          = var.aws_region
+  source_ami      = var.source_ami
   ssh_username    = var.ssh_username
-  vpc_id          = var.vpc_id
   subnet_id       = var.subnet_id
+
+
+  aws_polling {
+    delay_seconds = 100
+    max_attempts  = 50
+  }
+
 
   launch_block_device_mappings {
     delete_on_termination = true
@@ -64,15 +72,6 @@ source "amazon-ebs" "my-ami" {
     volume_type           = "gp2"
   }
 
-  source_ami_filter {
-    filters = {
-      "virtualization-type" = "hvm",
-      "name"                = "*ubuntu-bionic-18.04-amd64-server-*",
-      "root-device-type"    = "ebs"
-    }
-    owners      = ["099720109477"]
-    most_recent = true
-  }
 }
 
 # Build and provisioning block
@@ -105,42 +104,44 @@ build {
     ]
   }
 
-  # Upload the JAR file
+  # Upload the JAR file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../target/webapp-0.0.1-SNAPSHOT.jar"
-    destination = "/opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
+    destination = "/tmp/webapp-0.0.1-SNAPSHOT.jar"
     timeout     = "2m"
   }
 
-  # Set ownership and permissions for the JAR file
+  # Move the JAR file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
+      "sudo mv /tmp/webapp-0.0.1-SNAPSHOT.jar /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
       "sudo chown csye6225:csye6225 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
       "sudo chmod 755 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
     ]
   }
 
-  # Upload the application.properties file
+  # Upload the application.properties file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../src/main/resources/application.properties"
-    destination = "/opt/webapp/application.properties"
+    destination = "/tmp/application.properties"
   }
 
-  # Set ownership and permissions for application.properties
+  # Move the application.properties file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
+      "sudo mv /tmp/application.properties /opt/webapp/application.properties",
       "sudo chown csye6225:csye6225 /opt/webapp/application.properties",
       "sudo chmod 755 /opt/webapp/application.properties"
     ]
   }
 
-  # Upload the systemd service file
+  # Upload the systemd service file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../scripts/webapp.service"
     destination = "/tmp/webapp.service"
   }
 
-  # Move the service file and set permissions
+  # Move the service file from /tmp to /etc/systemd/system
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service",
