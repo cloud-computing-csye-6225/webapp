@@ -50,14 +50,13 @@ variable "subnet_id" {
 
 # Define the builder
 source "amazon-ebs" "my-ami" {
-  instance_type   = var.instance_type
-  region          = var.aws_region
   ami_name        = var.ami_name
   ami_description = var.ami_description
+  instance_type   = var.instance_type
+  region          = var.aws_region
   source_ami      = var.source_ami
   ssh_username    = var.ssh_username
   subnet_id       = var.subnet_id
-  ami_users       = var.ami_users
 
 
   aws_polling {
@@ -73,15 +72,6 @@ source "amazon-ebs" "my-ami" {
     volume_type           = "gp2"
   }
 
-  source_ami_filter {
-    filters = {
-      "virtualization-type" = "hvm",
-      "name"                = "*ubuntu-bionic-18.04-amd64-server-*",
-      "root-device-type"    = "ebs"
-    }
-    owners      = ["099720109477"]
-    most_recent = true
-  }
 }
 
 # Build and provisioning block
