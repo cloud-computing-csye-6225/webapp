@@ -50,7 +50,7 @@ variable "subnet_id" {
 
 # Define the builder
 source "amazon-ebs" "my-ami" {
-  ami_name        = var.ami_name
+  ami_name        = "${var.ami_name}-${formatdate("YYYY_MM_DD-HH_mm", timestamp())}"
   ami_description = var.ami_description
   instance_type   = var.instance_type
   region          = var.aws_region
