@@ -83,24 +83,21 @@ build {
     script = "${path.root}/../scripts/initial_setup.sh"
   }
 
-  provisioner "shell" {
-    script = "${path.root}/../scripts/db_setup.sh"
-  }
 
   # Ensure csye6225 user exists
   provisioner "shell" {
     inline = [
-      "sudo useradd -m -s /usr/sbin/nologin csye6225 || true"
+      "sudo mkdir -p \"/opt/webapp\"",
+      "sudo groupadd csye6225 || true",
+      "sudo useradd --system -s /usr/sbin/nologin -g csye6225 csye6225 || true",
     ]
   }
 
-  # Create necessary directories and set permissions
+  # Create necessary permissions and ownership
   provisioner "shell" {
     inline = [
-      "sudo mkdir -p /home/csye6225",
-      "sudo chown csye6225:csye6225 /home/csye6225",
-      "sudo mkdir -p /opt/webapp",
-      "sudo chown csye6225:csye6225 /opt/webapp"
+      "sudo chown -R csye6225:csye6225 /opt/webapp",
+      "sudo chmod -R 755 /opt/webapp"
     ]
   }
 
@@ -115,8 +112,6 @@ build {
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/webapp-0.0.1-SNAPSHOT.jar /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
-      "sudo chown csye6225:csye6225 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
-      "sudo chmod 755 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
     ]
   }
 
@@ -129,9 +124,7 @@ build {
   # Move the application.properties file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
-      "sudo mv /tmp/application.properties /opt/webapp/application.properties",
-      "sudo chown csye6225:csye6225 /opt/webapp/application.properties",
-      "sudo chmod 755 /opt/webapp/application.properties"
+      "sudo mv /tmp/application.properties /opt/webapp/application.properties"
     ]
   }
 
@@ -144,9 +137,7 @@ build {
   # Move the service file from /tmp to /etc/systemd/system
   provisioner "shell" {
     inline = [
-      "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service",
-      "sudo chown root:root /etc/systemd/system/webapp.service",
-      "sudo chmod 644 /etc/systemd/system/webapp.service"
+      "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service"
     ]
   }
 
@@ -154,8 +145,8 @@ build {
   provisioner "shell" {
     inline = [
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service",
-      "sudo systemctl start webapp.service"
+      "sudo systemctl enable webapp",
+      "sudo systemctl start webapp"
     ]
   }
 }
