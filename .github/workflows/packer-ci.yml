@@ -30,13 +30,14 @@ jobs:
       - name: Set up MySQL
         uses: shogo82148/actions-setup-mysql@v1
         with:
+          mysql-version: "8.0"
           root-password: ${{ secrets.MYSQL_PASSWORD }}
           user: ${{ secrets.MYSQL_USER }}
           password: ${{ secrets.MYSQL_PASSWORD}}
-              
-              # Create a database using the name stored in secrets
-              - name: Create MySQL Database
-                run: mysql -u${{ secrets.MYSQL_USER}} -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
+
+      # Create a database using the name stored in secrets
+      - name: Create MySQL Database
+        run: mysql -u${{ secrets.MYSQL_USER}} -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
 
       # Create application.properties dynamically
       - name: Create application.properties
