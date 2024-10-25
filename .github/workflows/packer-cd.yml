@@ -24,23 +24,37 @@ jobs:
 
       - name: Set up MySQL
         uses: shogo82148/actions-setup-mysql@v1
+        env:
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         with:
           mysql-version: "8.0"
-          root-password: ${{ secrets.MYSQL_PASSWORD }}
-          user: ${{ secrets.MYSQL_USER }}
-          password: ${{ secrets.MYSQL_PASSWORD}}
+          root-password: ${{ env.MYSQL_PASSWORD }}
+          database: ${{env.MYSQL_DB}}
+          user: ${{ env.MYSQL_USER }}
+          password: ${{ env.MYSQL_PASSWORD}}
 
       # Create a database using the name stored in secrets
       - name: Create MySQL Database
-        run: mysql -u${{ secrets.MYSQL_USER}} -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
+        env:
+          MYSQL_ROOT_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: mysql -u${{ env.MYSQL_USER}} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DB }};"
 
 
       - name: Create application.properties
+        env:
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           mkdir -p src/main/resources 
-          echo "spring.datasource.url=jdbc:mysql://${{ secrets.MYSQL_HOST }}:${{ secrets.MYSQL_PORT }}/${{ secrets.MYSQL_DB }}" > src/main/resources/application.properties
-          echo "spring.datasource.username=root" >> src/main/resources/application.properties
-          echo "spring.datasource.password=${{ secrets.MYSQL_PASSWORD }}" >> src/main/resources/application.properties
+          echo "spring.datasource.url=jdbc:mysql://${{ env.MYSQL_HOST }}:${{ env.MYSQL_PORT }}/${{ env.MYSQL_DB }}" > src/main/resources/application.properties
+          echo "spring.datasource.username=${{ env.MYSQL_USER}}" >> src/main/resources/application.properties
+          echo "spring.datasource.password=${{ env.MYSQL_PASSWORD }}" >> src/main/resources/application.properties
           echo "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver" >> src/main/resources/application.properties
           echo "spring.jpa.hibernate.ddl-auto=update" >> src/main/resources/application.properties
           echo "spring.jpa.show-sql=true" >> src/main/resources/application.properties
@@ -56,10 +70,14 @@ jobs:
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Packer
         uses: hashicorp/setup-packer@v2
