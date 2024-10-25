@@ -37,7 +37,7 @@ jobs:
       # Create a database using the name stored in secrets
       - name: Create MySQL Database
         env:
-          MYSQL_ROOT_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: mysql -u${{ env.MYSQL_USER}} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DB }};"
