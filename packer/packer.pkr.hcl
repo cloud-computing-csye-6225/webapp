@@ -7,7 +7,6 @@ packer {
   }
 }
 
-# Variables declaration (left as is)
 variable "aws_region" {
   type    = string
   default = "us-east-1"
@@ -23,9 +22,14 @@ variable "source_ami" {
   default = "ami-0866a3c8686eaeeba"
 }
 
+variable "ami_users" {
+  type    = list(string)
+  default = ["816069136972"]
+}
+
 variable "ami_description" {
   type    = string
-  default = "creating ami from CLI"
+  default = "creating ami from CLI CSYE 6225"
 }
 
 variable "ssh_username" {
@@ -38,24 +42,28 @@ variable "instance_type" {
   default = "t2.small"
 }
 
-variable "vpc_id" {
-  type = string
-}
 
 variable "subnet_id" {
-  type = string
+  type    = string
+  default = "subnet-03c85a27d9152795e"
 }
 
 # Define the builder
 source "amazon-ebs" "my-ami" {
-  region          = var.aws_region
-  ami_name        = var.ami_name
+  ami_name        = "${var.ami_name}-${formatdate("YYYY_MM_DD-HH_mm", timestamp())}"
   ami_description = var.ami_description
-  ami_regions     = ["us-east-1"]
   instance_type   = var.instance_type
+  region          = var.aws_region
+  source_ami      = var.source_ami
   ssh_username    = var.ssh_username
-  vpc_id          = var.vpc_id
   subnet_id       = var.subnet_id
+
+
+  aws_polling {
+    delay_seconds = 100
+    max_attempts  = 50
+  }
+
 
   launch_block_device_mappings {
     delete_on_termination = true
@@ -64,15 +72,6 @@ source "amazon-ebs" "my-ami" {
     volume_type           = "gp2"
   }
 
-  source_ami_filter {
-    filters = {
-      "virtualization-type" = "hvm",
-      "name"                = "*ubuntu-bionic-18.04-amd64-server-*",
-      "root-device-type"    = "ebs"
-    }
-    owners      = ["099720109477"]
-    most_recent = true
-  }
 }
 
 # Build and provisioning block
@@ -84,68 +83,61 @@ build {
     script = "${path.root}/../scripts/initial_setup.sh"
   }
 
-  provisioner "shell" {
-    script = "${path.root}/../scripts/db_setup.sh"
-  }
 
   # Ensure csye6225 user exists
   provisioner "shell" {
     inline = [
-      "sudo useradd -m -s /usr/sbin/nologin csye6225 || true"
+      "sudo mkdir -p \"/opt/webapp\"",
+      "sudo groupadd csye6225 || true",
+      "sudo useradd --system -s /usr/sbin/nologin -g csye6225 csye6225 || true",
     ]
   }
 
-  # Create necessary directories and set permissions
+  # Create necessary permissions and ownership
   provisioner "shell" {
     inline = [
-      "sudo mkdir -p /home/csye6225",
-      "sudo chown csye6225:csye6225 /home/csye6225",
-      "sudo mkdir -p /opt/webapp",
-      "sudo chown csye6225:csye6225 /opt/webapp"
+      "sudo chown -R csye6225:csye6225 /opt/webapp",
+      "sudo chmod -R 755 /opt/webapp"
     ]
   }
 
-  # Upload the JAR file
+  # Upload the JAR file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../target/webapp-0.0.1-SNAPSHOT.jar"
-    destination = "/opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
+    destination = "/tmp/webapp-0.0.1-SNAPSHOT.jar"
     timeout     = "2m"
   }
 
-  # Set ownership and permissions for the JAR file
+  # Move the JAR file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
-      "sudo chown csye6225:csye6225 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
-      "sudo chmod 755 /opt/webapp/webapp-0.0.1-SNAPSHOT.jar"
+      "sudo mv /tmp/webapp-0.0.1-SNAPSHOT.jar /opt/webapp/webapp-0.0.1-SNAPSHOT.jar",
     ]
   }
 
-  # Upload the application.properties file
+  # Upload the application.properties file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../src/main/resources/application.properties"
-    destination = "/opt/webapp/application.properties"
+    destination = "/tmp/application.properties"
   }
 
-  # Set ownership and permissions for application.properties
+  # Move the application.properties file from /tmp to /opt/webapp
   provisioner "shell" {
     inline = [
-      "sudo chown csye6225:csye6225 /opt/webapp/application.properties",
-      "sudo chmod 755 /opt/webapp/application.properties"
+      "sudo mv /tmp/application.properties /opt/webapp/application.properties"
     ]
   }
 
-  # Upload the systemd service file
+  # Upload the systemd service file to /tmp first
   provisioner "file" {
     source      = "${path.root}/../scripts/webapp.service"
     destination = "/tmp/webapp.service"
   }
 
-  # Move the service file and set permissions
+  # Move the service file from /tmp to /etc/systemd/system
   provisioner "shell" {
     inline = [
-      "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service",
-      "sudo chown root:root /etc/systemd/system/webapp.service",
-      "sudo chmod 644 /etc/systemd/system/webapp.service"
+      "sudo mv /tmp/webapp.service /etc/systemd/system/webapp.service"
     ]
   }
 
@@ -153,8 +145,8 @@ build {
   provisioner "shell" {
     inline = [
       "sudo systemctl daemon-reload",
-      "sudo systemctl enable webapp.service",
-      "sudo systemctl start webapp.service"
+      "sudo systemctl enable webapp",
+      "sudo systemctl start webapp"
     ]
   }
 }

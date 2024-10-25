@@ -12,6 +12,8 @@ on:
 jobs:
   # Step 1: Java Maven Build
   build_test:
+    name: ci status check
+    environment: development
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository code
@@ -29,21 +31,37 @@ jobs:
       # Set up MySQL using the secrets provided
       - name: Set up MySQL
         uses: shogo82148/actions-setup-mysql@v1
+        env:
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         with:
           mysql-version: "8.0"
-          root-password: ${{ secrets.MYSQL_PASSWORD }}
+          root-password: ${{ env.MYSQL_PASSWORD }}
+          database: ${{env.MYSQL_DB}}
+          user: ${{ env.MYSQL_USER }}
+          password: ${{ env.MYSQL_PASSWORD}}
 
       # Create a database using the name stored in secrets
       - name: Create MySQL Database
-        run: mysql -uroot -p${{ secrets.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.MYSQL_DB }};"
+        env:
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: mysql -u${{ env.MYSQL_USER}} -p${{ env.MYSQL_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ env.MYSQL_DB }};"
 
       # Create application.properties dynamically
       - name: Create application.properties
+        env:
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           mkdir -p src/main/resources 
-          echo "spring.datasource.url=jdbc:mysql://${{ secrets.MYSQL_HOST }}:${{ secrets.MYSQL_PORT }}/${{ secrets.MYSQL_DB }}" > src/main/resources/application.properties
-          echo "spring.datasource.username=root" >> src/main/resources/application.properties
-          echo "spring.datasource.password=${{ secrets.MYSQL_PASSWORD }}" >> src/main/resources/application.properties
+          echo "spring.datasource.url=jdbc:mysql://${{ env.MYSQL_HOST }}:${{ env.MYSQL_PORT }}/${{ env.MYSQL_DB }}" > src/main/resources/application.properties
+          echo "spring.datasource.username=${{ env.MYSQL_USER}}" >> src/main/resources/application.properties
+          echo "spring.datasource.password=${{ env.MYSQL_PASSWORD }}" >> src/main/resources/application.properties
           echo "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver" >> src/main/resources/application.properties
           echo "spring.jpa.hibernate.ddl-auto=update" >> src/main/resources/application.properties
           echo "spring.jpa.show-sql=true" >> src/main/resources/application.properties
@@ -67,19 +85,6 @@ jobs:
       - name: Initialise Packer
         run: packer init packer/packer.pkr.hcl
 
-      # Step 3: Dynamically Create the `variables.pkr.hcl` File from Secrets
-      - name: Create Packer Variables File with Timestamp
-        run: |
-          timestamp=$(date +"%Y%m%d%H%M%S")
-          cat <<EOF > packer/variables.pkr.hcl
-          aws_region      = "${{ secrets.AWS_REGION }}"
-          ami_name        = "my-webapp-ami-${timestamp}"
-          ami_description = "AMI creation for Assignment 04"
-          instance_type   = "t2.small"
-          vpc_id          = "${{ secrets.VPC_ID }}"
-          subnet_id       = "${{ secrets.SUBNET_ID }}"
-          ssh_username    = "ubuntu"
-          EOF
 
       # Step 4: Packer format check
       - name: Packer format check
@@ -87,7 +92,7 @@ jobs:
 
       # Step 5: Packer validate template
       - name: Validate Packer template
-        run: packer validate -var-file=packer/variables.pkr.hcl packer/packer.pkr.hcl
+        run: packer validate -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
 
 
       # Clean up the dynamically generated application.properties file
