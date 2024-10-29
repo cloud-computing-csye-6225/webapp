@@ -3,7 +3,9 @@
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/controller/UserController.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/dto/UserDto.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/healthcheck/controller/HeathCheckController.java
+/Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/model/Image.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/model/User.java
+/Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/repository/ImageRepository.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/repository/UserRepository.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/security/SecurityConfig.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/service/UserService.java
