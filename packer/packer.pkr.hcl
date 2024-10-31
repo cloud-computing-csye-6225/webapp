@@ -144,7 +144,7 @@ build {
   # Install the Amazon CloudWatch Agent
   provisioner "shell" {
     inline = [
-      "sudo yum install -y amazon-cloudwatch-agent",
+      "sudo apt install -y amazon-cloudwatch-agent",
       "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/bin"
     ]
   }
