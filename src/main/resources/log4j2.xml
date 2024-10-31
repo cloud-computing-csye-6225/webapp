@@ -21,7 +21,7 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="com.neu.webapp" level="info" additivity="false">
+        <Logger name="com.webapp" level="info" additivity="false">
             <AppenderRef ref="FileAppender" />
         </Logger>
         <Logger name="org.springframework" level="ERROR">
