@@ -1,8 +1,12 @@
 package com.webapp.security;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import com.webapp.service.UserService;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -15,21 +19,22 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableWebSecurity
 public class SecurityConfig {
 
+
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
         http
             .csrf(csrf -> csrf.disable())
             .authorizeRequests((authz) ->authz
-                    .requestMatchers("/healthz").permitAll()
-                    .requestMatchers(HttpMethod.POST,"/api/users").permitAll()
-                    .requestMatchers(HttpMethod.GET,"/api/users/{id}").permitAll()
-                    .requestMatchers(HttpMethod.PUT,"/api/users").permitAll()
-                    .requestMatchers(HttpMethod.DELETE,"/api/users/{id}").permitAll()
                     .anyRequest().permitAll()
-            )
-            .httpBasic(withDefaults());
+            );
         return http.build();
     }
+
+
+
+
+
 //    @Bean
 //    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 //        http
@@ -47,7 +52,8 @@ public class SecurityConfig {
 //    }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder()
+    {
         return new BCryptPasswordEncoder();
     }
 
