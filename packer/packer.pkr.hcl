@@ -141,6 +141,38 @@ build {
     ]
   }
 
+  # Install the Amazon CloudWatch Agent
+  provisioner "shell" {
+    inline = [
+      "sudo yum install -y amazon-cloudwatch-agent",
+      "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/bin"
+    ]
+  }
+
+  # Upload the CloudWatch agent configuration file to /tmp first
+  provisioner "file" {
+    source      = "${path.root}/../infrastructure/aws/cloudwatch_config.json"
+    destination = "/tmp/cloudwatch_config.json"
+  }
+
+  # Move the CloudWatch configuration file from /tmp to /opt
+  provisioner "shell" {
+    inline = [
+      "sudo mv /tmp/cloudwatch_config.json /opt/cloudwatch_config.json",
+      "sudo chmod 644 /opt/cloudwatch_config.json"
+    ]
+  }
+
+  # Start and enable the CloudWatch agent with the specified configuration
+  provisioner "shell" {
+    inline = [
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/cloudwatch_config.json -s",
+      "sudo systemctl enable amazon-cloudwatch-agent.service",
+      "sudo systemctl start amazon-cloudwatch-agent.service"
+    ]
+  }
+
+
   # Reload systemd and start the web app service
   provisioner "shell" {
     inline = [
