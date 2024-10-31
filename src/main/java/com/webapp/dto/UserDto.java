@@ -2,10 +2,8 @@ package com.webapp.dto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+
 import java.time.LocalDateTime;
 
 @Schema(description = "DTO representing a User")
@@ -23,6 +21,11 @@ public class UserDto {
     @Schema(description = "Last name of the user", example = "Green", required = true)
     @NotBlank(message = "Last name is required")
     private String lastName;
+
+    @Schema(description = "Username, same as email", example = "Green", required = true)
+    @NotNull
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String username;
     @Schema(description = "The user's password, which must be at least 6 characters", example = "password", required = true)
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")

@@ -1,220 +1,166 @@
 package com.webapp.controller;
 
 import com.webapp.dto.UserDto;
+import com.webapp.exception.UserNotAuthenticatedException;
+import com.webapp.model.User;
 import com.webapp.service.UserService;
+import com.webapp.utils.ResponseHandler;
+import com.timgroup.statsd.StatsDClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/v1/user")
 public class UserController {
+
     @Autowired
-    UserService userService;
+    private UserService userService;
+    @Autowired
+    private StatsDClient statsDClient;
 
-    // Create User
-    @Operation(summary = "Creating new User",description = "The api takes Json parameters like FirstName, LastName, Email, password as input to create a new user")
-    @ApiResponses( {
-            @ApiResponse(responseCode = "201",description = "User created Successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request. Invalid user data")
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    }
-    )
+    @Operation(summary = "Create a new user")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "User created successfully"),
+            @ApiResponse(responseCode = "400", description = "Improper request or email already in use"),
+            @ApiResponse(responseCode = "503", description = "Service unavailable")
+    })
     @PostMapping
-    public ResponseEntity<Void> createUser(@RequestBody Map<String, Object> requestBody){
-        try{
-            if(!isValidRequest(requestBody)){
-                throw new IllegalArgumentException("Improper Request");
+    public ResponseEntity<?> createUser(@RequestBody Map<String, Object> requestBody) {
+        long startTime = System.currentTimeMillis();
+        statsDClient.incrementCounter("api.user.create.count");
+
+        try {
+            if (!isValidRequest(requestBody)) {
+                return ResponseHandler.generateErrorResponse("Improper Request", HttpStatus.BAD_REQUEST);
             }
 
             String email = (String) requestBody.get("email");
             String firstName = (String) requestBody.get("firstname");
             String lastName = (String) requestBody.get("lastname");
             String password = (String) requestBody.get("password");
-            if(email == null || firstName == null || lastName ==null || password ==null){
-                throw new IllegalArgumentException("Missing parameters");
+
+            if (email == null || firstName == null || lastName == null || password == null) {
+                return ResponseHandler.generateErrorResponse("Missing parameters", HttpStatus.BAD_REQUEST);
             }
 
-            userService.createUser(email,firstName,lastName,password);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                    .header(HttpHeaders.PRAGMA,"no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
-        }
-        catch (IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                    .header(HttpHeaders.PRAGMA,"no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
+            userService.createUser(email, firstName, lastName, password);
 
-        }
-        catch (Exception e){
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                    .header(HttpHeaders.PRAGMA,"no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
+            long duration = System.currentTimeMillis() - startTime;
+            statsDClient.recordExecutionTime("api.user.create.duration", duration);
+            return ResponseHandler.generateResponse("User created successfully", HttpStatus.CREATED);
 
-        }
-    }
-
-    //Update user
-    @Operation(summary = "Update Existing user by Id",description = "The api takes Json parameters like FirstName, LastName, Email, with id passed as input to update the details of an existing user")
-    @ApiResponses( {
-            @ApiResponse(responseCode = "200",description = "User details updated Successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request. Invalid user data")
-
-    }
-    )
-    @PutMapping()
-    public ResponseEntity<Void> updateUser(@RequestBody Map<String,Object> requestBody){
-       try{
-           if (!isValidRequest(requestBody)) {
-               throw new IllegalArgumentException();
-           }
-           String email = (String) requestBody.get("email");
-           String firstName = (String) requestBody.get("firstname");
-           String lastName = (String) requestBody.get("lastname");
-           String password = (String) requestBody.get("password");
-
-
-           userService.updateUser(email,firstName,lastName,password);
-           return ResponseEntity.status(HttpStatus.OK)
-                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                   .header(HttpHeaders.PRAGMA,"no-cache")
-                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                   .build();
-       }
-       catch (IllegalArgumentException e){
-           return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                   .header(HttpHeaders.PRAGMA,"no-cache")
-                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                   .build();
-
-       }
-       catch (NoSuchElementException e){
-           return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                   .header(HttpHeaders.PRAGMA,"no-cache")
-                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                   .build();
-
-       }
-       catch (Exception e){
-           return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                   .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                   .header(HttpHeaders.PRAGMA,"no-cache")
-                   .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                   .build();
-
-       }
-
-    }
-    //  Get User
-    @Operation(summary = "Get Existing user by Id",description = "The api takes Json parameters like id passed as input to fetch the details of an existing user")
-    @ApiResponses( {
-            @ApiResponse(responseCode = "200",description = "User details updated Successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request. Invalid user data")
-
-    }
-    )
-    @GetMapping()
-    public ResponseEntity<UserDto> getUser(@RequestBody Map<String,Object> requestBody) {
-        try{
-        if (!isValidRequest(requestBody)) {
-            throw new IllegalArgumentException();
-        }
-
-        String email = (String) requestBody.get("email");
-        String firstName = (String) requestBody.get("firstname");
-        String lastName = (String) requestBody.get("lastname");
-
-        if (email == null || email.isEmpty()) {
-            throw new IllegalArgumentException();
-
-        }
-        UserDto foundUser = userService.getUser(email, firstName, lastName);
-        if (foundUser == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
-        }
-
-        return ResponseEntity.status(HttpStatus.OK)
-                .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
-                .header(HttpHeaders.PRAGMA, "no-cache")
-                .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                .body(foundUser);
-    }
-        catch (IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
-
-        }
-        catch (Exception e){
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .header(HttpHeaders.CACHE_CONTROL, "no-cache", "no-store", "must-revalidate")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
-        }
-
-    }
-
-    // delete User
-    @Operation(summary = "Delete user by Id",description = "The api takes Json parameters like id passed as input to delete the details of an existing user after finding a match")
-    @ApiResponses( {
-            @ApiResponse(responseCode = "200",description = "User details deleted Successfully"),
-            @ApiResponse(responseCode = "404", description = "User data not found")
-
-    }
-    )
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        try {
-            userService.deleteUser(id);
-            return ResponseEntity.status(HttpStatus.OK)
-                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                    .header(HttpHeaders.PRAGMA,"no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                    .header(HttpHeaders.PRAGMA,"no-cache")
-                    .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                    .build();
+            logger.warn("Invalid request or email already in use: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logger.error("Error creating user: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Service unavailable", HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
-    @RequestMapping(method = {RequestMethod.PATCH,RequestMethod.HEAD,RequestMethod.OPTIONS})
-    public ResponseEntity<Void> handleInvalidMethods(){
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .header(HttpHeaders.CACHE_CONTROL,"no-cache","no-store","must-revalidate")
-                .header(HttpHeaders.PRAGMA,"no-cache")
-                .header("X_CONTENT_TYPE_OPTIONS", "nosniff")
-                .build();
+    @Operation(summary = "Update an existing user")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User details updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Improper request"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "503", description = "Service unavailable")
+    })
+    @PutMapping
+    public ResponseEntity<?> updateUser(@RequestBody Map<String, Object> requestBody) {
+        long startTime = System.currentTimeMillis();
+        statsDClient.incrementCounter("api.user.update.count");
 
+        try {
+            if (!isValidRequest(requestBody)) {
+                return ResponseHandler.generateErrorResponse("Improper Request", HttpStatus.BAD_REQUEST);
+            }
+
+            String email = (String) requestBody.get("email");
+            String firstName = (String) requestBody.get("firstname");
+            String lastName = (String) requestBody.get("lastname");
+            String password = (String) requestBody.get("password");
+
+            userService.updateUser(email, firstName, lastName, password);
+
+            long duration = System.currentTimeMillis() - startTime;
+            statsDClient.recordExecutionTime("api.user.update.duration", duration);
+            return ResponseHandler.generateResponse("User details updated successfully", HttpStatus.OK);
+
+        } catch (NoSuchElementException e) {
+            logger.warn("User not found for update: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("User not found", HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid data provided: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Invalid user data", HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logger.error("Error updating user: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Service unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+        }
     }
 
-    private boolean isValidRequest(Map<String,Object> requestBody){
-        for(String key: requestBody.keySet()){
-            if(!key.equals("email") && !key.equals("firstname") && !key.equals("lastname") && !key.equals("password")){
+    @Operation(summary = "Retrieve an existing user")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User details retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Improper request"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized access"),
+            @ApiResponse(responseCode = "503", description = "Service unavailable")
+    })
+    @GetMapping
+    public ResponseEntity<?> getUser(@RequestBody Map<String, Object> requestBody,
+                                     @RequestHeader(value = "Authorization") String authorization) {
+        long startTime = System.currentTimeMillis();
+        statsDClient.incrementCounter("api.user.get.count");
+
+        try {
+            if (!isValidRequest(requestBody)) {
+                return ResponseHandler.generateErrorResponse("Improper Request", HttpStatus.BAD_REQUEST);
+            }
+
+            User foundUser = userService.getUserByAuthorization(authorization);
+
+            long duration = System.currentTimeMillis() - startTime;
+            statsDClient.recordExecutionTime("api.user.get.duration", duration);
+            return ResponseHandler.generateSuccessResponse(foundUser, HttpStatus.OK);
+
+        } catch (UserNotAuthenticatedException e) {
+            logger.warn("Unauthorized access attempt: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Unauthorized access", HttpStatus.UNAUTHORIZED);
+        } catch (NoSuchElementException e) {
+            logger.warn("User not found: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("User not found", HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid request data: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Invalid request data", HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            logger.error("Error retrieving user: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Service unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    // Handle invalid methods
+    @RequestMapping(method = {RequestMethod.PATCH, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.DELETE})
+    public ResponseEntity<?> handleInvalidMethods() {
+        return ResponseHandler.generateErrorResponse("Method not allowed", HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    // Helper method for request validation
+    private boolean isValidRequest(Map<String, Object> requestBody) {
+        for (String key : requestBody.keySet()) {
+            if (!key.equals("email") && !key.equals("firstname") && !key.equals("lastname") && !key.equals("password")) {
                 return false;
             }
         }
