@@ -73,6 +73,14 @@ jobs:
           echo "spring.jpa.open-in-view=false" >> src/main/resources/application.properties
 
       - name: Build with Maven
+        env:
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+          MYSQL_DB: ${{ secrets.MYSQL_DB }}
+          MYSQL_USER: 'root'
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: mvn -B package --file pom.xml
 
       # Optional: Debugging step to verify file locations
