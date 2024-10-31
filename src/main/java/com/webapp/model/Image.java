@@ -22,10 +22,9 @@ import java.util.Date;
 public class Image {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @ReadOnlyProperty
     @Column(name = "image_id")
     private long imageId;
-    @ReadOnlyProperty
+
     @Column(name = "user_id")
     private long userId;
     @Column(name = "file_name")
@@ -36,7 +35,6 @@ public class Image {
     private LocalDateTime dateCreated;
 
     private LocalDateTime dateUpdated;
-    @ReadOnlyProperty
     @Column(name = "s3_bucket_path")
     private String s3BucketPath;
 }
