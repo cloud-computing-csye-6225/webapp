@@ -144,10 +144,12 @@ build {
   # Install the Amazon CloudWatch Agent
   provisioner "shell" {
     inline = [
-      "sudo apt install -y amazon-cloudwatch-agent",
+      "wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
+      "sudo dpkg -i amazon-cloudwatch-agent.deb",
       "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/bin"
     ]
   }
+
 
   # Upload the CloudWatch agent configuration file to /tmp first
   provisioner "file" {
