@@ -145,7 +145,7 @@ public class ImageController {
             long duration = System.currentTimeMillis() - startTime;
             statsDClient.recordExecutionTime("api.user.image.delete.duration", duration);
 
-            return ResponseHandler.generateResponse("Image deleted successfully", HttpStatus.OK);
+            return ResponseHandler.generateResponse("Image deleted ", HttpStatus.OK);
 
         }
         catch (UserNotAuthenticatedException e) {
