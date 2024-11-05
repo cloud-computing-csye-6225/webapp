@@ -19,8 +19,8 @@ public class AmazonConfig {
 
         return AmazonS3ClientBuilder.standard()
                 .withRegion(clientRegion)
-                .withCredentials(new ProfileCredentialsProvider("dev"))
-                //.withCredentials(new InstanceProfileCredentialsProvider(false))
+                //.withCredentials(new ProfileCredentialsProvider("dev"))
+                .withCredentials(new InstanceProfileCredentialsProvider(false))
                 .build();
     }
 }
