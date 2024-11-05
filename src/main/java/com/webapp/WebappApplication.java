@@ -6,6 +6,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -13,11 +15,17 @@ import java.net.URL;
 @SpringBootApplication(exclude = SecurityAutoConfiguration.class)
 public class WebappApplication {
 
+    private static final Logger logger = LogManager.getLogger(WebappApplication.class);
+
+
     // Inject the API key from the properties file
     @Value("${sendgrid.api-key}")
     private String apiKey;
 
     public static void main(String[] args) {
+        logger.info("Application startup - info level");
+        logger.debug("Application startup - debug level");
+        logger.error("Application startup - error level");
         SpringApplication.run(WebappApplication.class, args);
     }
 

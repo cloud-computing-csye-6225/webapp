@@ -1,7 +1,9 @@
 package com.webapp.utils;
 
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.util.HashMap;
@@ -34,8 +36,16 @@ public class ResponseHandler {
     }
 
     public static <T> ResponseEntity<T> generateSuccessResponse(T body, HttpStatus status) {
+        HttpHeaders headers = getDefaultHeaders();
+
+        if (body instanceof InputStreamResource) {
+            headers.setContentType(MediaType.IMAGE_JPEG); // or MediaType.IMAGE_PNG based on your image type
+            headers.setCacheControl("no-cache, no-store, must-revalidate");
+            headers.setPragma("no-cache");
+            headers.setExpires(0);
+        }
         return ResponseEntity.status(status)
-                .headers(getDefaultHeaders())
+                .headers(headers)
                 .body(body);
     }
 }

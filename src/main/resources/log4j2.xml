@@ -10,7 +10,7 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
         </Console>
-        <RollingFile name="FileAppender" fileName="logs/csye6225.log" filePattern="csye6225-%d{yyyy-MM-dd}-%i.log">
+        <RollingFile name="FileAppender" fileName="../logs/csye6225.log" filePattern="../logs/csye6225-%d{yyyy-MM-dd}-%i.log">
             <PatternLayout>
                 <Pattern>${LOG_PATTERN}</Pattern>
             </PatternLayout>
@@ -27,7 +27,10 @@
         <Logger name="org.springframework" level="ERROR">
             <AppenderRef ref="Console" />
         </Logger>
-        <Root level="info">
+        <Logger name="com.amazonaws" level="debug" additivity="false">
+            <AppenderRef ref="FileAppender" />
+        </Logger>
+        <Root level="debug">
             <AppenderRef ref="FileAppender" />
         </Root>
     </Loggers>
