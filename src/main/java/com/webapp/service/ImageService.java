@@ -7,14 +7,16 @@ import com.webapp.exception.ImageNotFoundException;
 import com.webapp.dto.ImageDto;
 import com.webapp.model.Image;
 import com.webapp.repository.ImageRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.io.InputStream;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.apache.http.entity.ContentType.*;
@@ -29,25 +31,39 @@ public class ImageService {
     private FileStore fileStore;
     @Autowired
     private ImageRepository imageRepository;
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LogManager.getLogger(this.getClass());
 
     @Value("${S3_BUCKET}")
     private String bucketName;
 
     public void saveImage(MultipartFile file, Long userId) {
-        // Check if the file is empty
         if (file.isEmpty()) {
             logger.warn("No file to upload for user {}", userId);
             throw new IllegalArgumentException("Cannot upload an empty file.");
         }
 
-        // Check if the file is an image
-        if (!Arrays.asList(IMAGE_PNG.getMimeType(), IMAGE_JPEG.getMimeType()).contains(file.getContentType())) {
+        validateImageFileType(file, userId);
+        deleteExistingImageIfPresent(userId);
+
+        Map<String, String> metadata = prepareFileMetadata(file);
+        Long fileId = generateRandomId();
+        String path = bucketName;
+        String fileName = file.getOriginalFilename()+"_"+userId.toString()+"_"+fileId.toString();
+        uploadImageToS3(path, fileName, metadata, file, userId);
+        saveImageDetailsToDatabase(userId, path, fileName);
+
+        logger.info("Image successfully uploaded and saved for user {}", userId);
+    }
+
+    private void validateImageFileType(MultipartFile file, Long userId) {
+        List<String> allowedMimeTypes = Arrays.asList(IMAGE_PNG.getMimeType(), IMAGE_JPEG.getMimeType());
+        if (!allowedMimeTypes.contains(file.getContentType())) {
             logger.warn("Invalid file type uploaded by user {}", userId);
             throw new IllegalArgumentException("File uploaded is not a valid image.");
         }
+    }
 
-        // If an image already exists for the user, delete it before uploading the new one
+    private void deleteExistingImageIfPresent(Long userId) {
         Image existingImage = imageRepository.findImageByUserId(userId);
         if (existingImage != null) {
             try {
@@ -59,17 +75,16 @@ public class ImageService {
                 throw new FileDeletionException("Failed to delete existing image for user " + userId, e);
             }
         }
+    }
 
-        // Prepare metadata
+    private Map<String, String> prepareFileMetadata(MultipartFile file) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put("Content-Type", file.getContentType());
         metadata.put("Content-Length", String.valueOf(file.getSize()));
+        return metadata;
+    }
 
-        // Define file path and name
-        Long fileId = generateRandomId();
-        String path = String.format("%s/%s/%s", bucketName, userId.toString(), fileId.toString());
-        String fileName = file.getOriginalFilename();
-
+    private void uploadImageToS3(String path, String fileName, Map<String, String> metadata, MultipartFile file, Long userId) {
         try {
             logger.info("Uploading new image for user {} to path {}", userId, path);
             fileStore.uploadFile(path, fileName, Optional.of(metadata), file.getInputStream());
@@ -80,15 +95,17 @@ public class ImageService {
             logger.error("AWS error uploading image for user {}: {}", userId, e.getErrorMessage());
             throw new FileUploadException("AWS service failed to upload file", e);
         }
+    }
 
-        // Save image details in database
+    private void saveImageDetailsToDatabase(Long userId, String path, String fileName) {
         Image image = Image.builder()
                 .userId(userId)
                 .s3BucketPath(path)
                 .fileName(fileName)
+                .dateCreated(LocalDateTime.now())
+                .dateUpdated(LocalDateTime.now())
                 .build();
         imageRepository.save(image);
-        logger.info("Image successfully uploaded and saved for user {}", userId);
     }
 
     public Image getImageByUserId(Long userId) {
@@ -98,6 +115,17 @@ public class ImageService {
             throw new ImageNotFoundException("Image not found for user " + userId);
         }
         return image;
+    }
+
+    public InputStream getImagefromS3(Long userId) {
+
+        // Construct the S3 path based on userId or any other logic
+        Image image = imageRepository.findImageByUserId(userId);
+
+        String path = bucketName;
+        String fileName = image.getFileName();
+
+        return fileStore.retrieveFile(path, fileName);
     }
 
     private long generateRandomId() {
