@@ -1,6 +1,7 @@
 package com.webapp.config;
 
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +19,8 @@ public class AmazonConfig {
 
         return AmazonS3ClientBuilder.standard()
                 .withRegion(clientRegion)
-                .withCredentials(new InstanceProfileCredentialsProvider(false))
+                .withCredentials(new ProfileCredentialsProvider("dev"))
+                //.withCredentials(new InstanceProfileCredentialsProvider(false))
                 .build();
     }
 }

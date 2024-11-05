@@ -3,8 +3,10 @@ package com.webapp.controller;
 import com.webapp.exception.FileUploadException;
 import com.webapp.exception.FileDeletionException;
 import com.webapp.exception.ImageNotFoundException;
+import com.webapp.exception.UserNotAuthenticatedException;
 import com.webapp.model.Image;
 import com.webapp.model.User;
+import com.webapp.service.FileStore;
 import com.webapp.service.ImageService;
 import com.webapp.service.UserService;
 import com.webapp.utils.ResponseHandler;
@@ -13,13 +15,19 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.AllArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.io.InputStream;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controller for handling user profile picture upload, retrieval, and deletion.
@@ -30,13 +38,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class ImageController {
 
     @Autowired
+    private FileStore fileStore;
+
+    @Autowired
     private ImageService imageService;
     @Autowired
     private UserService userService;
     @Autowired
     private StatsDClient statsDClient;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LogManager.getLogger(this.getClass());
 
     @Operation(summary = "Upload Profile Image", description = "Uploads a profile picture for the authenticated user.")
     @ApiResponses(value = {
@@ -45,10 +56,9 @@ public class ImageController {
             @ApiResponse(responseCode = "500", description = "Internal server error while uploading image")
     })
     @PostMapping(
-            consumes = "multipart/form-data",
-            produces = "application/json"
+            produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file,
+    public ResponseEntity<?> uploadFile(@RequestPart("File") MultipartFile file,
                                         @RequestHeader(value = "Authorization") String authorization) {
         long startTime = System.currentTimeMillis();
         statsDClient.incrementCounter("api.user.image.upload.count");
@@ -63,7 +73,11 @@ public class ImageController {
 
             return ResponseHandler.generateResponse("Image uploaded successfully", HttpStatus.CREATED);
 
-        } catch (IllegalArgumentException e) {
+        }
+        catch (UserNotAuthenticatedException e) {
+            logger.warn("Unauthorized access attempt: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Unauthorized access", HttpStatus.UNAUTHORIZED);
+        }catch (IllegalArgumentException e) {
             logger.warn("Invalid file upload attempt: {}", e.getMessage());
             return ResponseHandler.generateErrorResponse("Invalid input or non-image file", HttpStatus.BAD_REQUEST);
         } catch (FileUploadException e) {
@@ -91,12 +105,18 @@ public class ImageController {
             logger.info("{} is retrieving their profile image", user.getEmail());
 
             Image image = imageService.getImageByUserId(user.getId());
+            InputStream imageStream = imageService.getImagefromS3(user.getId());
+
             long duration = System.currentTimeMillis() - startTime;
             statsDClient.recordExecutionTime("api.user.image.get.duration", duration);
 
-            return ResponseHandler.generateSuccessResponse(image, HttpStatus.OK);
+            return ResponseHandler.generateSuccessResponse(new InputStreamResource(imageStream), HttpStatus.OK);
 
-        } catch (ImageNotFoundException e) {
+        }
+        catch (UserNotAuthenticatedException e) {
+            logger.warn("Unauthorized access attempt: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Unauthorized access", HttpStatus.UNAUTHORIZED);
+        }catch (ImageNotFoundException e) {
             logger.warn("Image not found for user: {}", e.getMessage());
             return ResponseHandler.generateErrorResponse("No profile image found", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
@@ -125,9 +145,13 @@ public class ImageController {
             long duration = System.currentTimeMillis() - startTime;
             statsDClient.recordExecutionTime("api.user.image.delete.duration", duration);
 
-            return ResponseHandler.generateResponse("Image deleted successfully", HttpStatus.NO_CONTENT);
+            return ResponseHandler.generateResponse("Image deleted ", HttpStatus.OK);
 
-        } catch (ImageNotFoundException e) {
+        }
+        catch (UserNotAuthenticatedException e) {
+            logger.warn("Unauthorized access attempt: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Unauthorized access", HttpStatus.UNAUTHORIZED);
+        }catch (ImageNotFoundException e) {
             logger.warn("Image not found for deletion: {}", e.getMessage());
             return ResponseHandler.generateErrorResponse("Image not found", HttpStatus.NOT_FOUND);
         } catch (FileDeletionException e) {
@@ -137,5 +161,13 @@ public class ImageController {
             logger.error("Unexpected error deleting image: {}", e.getMessage());
             return ResponseHandler.generateErrorResponse("Failed to delete image", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+
+    @PostMapping("/test-s3-connection")
+    public ResponseEntity<String> testS3Connection() {
+        boolean isConnected = fileStore.checkS3Connection("1919de32-06d8-089a-f386-848f8fc5e5e9");
+        return isConnected ? ResponseEntity.ok("Connected to S3 successfully!")
+                : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to connect to S3");
     }
 }
