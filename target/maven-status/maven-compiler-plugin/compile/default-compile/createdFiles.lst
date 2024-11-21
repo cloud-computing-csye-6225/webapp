@@ -22,4 +22,5 @@ com/webapp/healthcheck/controller/HeathCheckController.class
 com/webapp/service/MetricService.class
 com/webapp/dto/ImageDto.class
 com/webapp/controller/UserController.class
+com/webapp/config/AppConfig.class
 com/webapp/exception/FileDeletionException.class

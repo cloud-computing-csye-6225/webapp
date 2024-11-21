@@ -114,6 +114,3 @@ jobs:
       - name: Validate Packer Template
         working-directory: ./packer
         run: packer validate .
-
-      - name: Build AMI with Packer
-        run: packer build -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl

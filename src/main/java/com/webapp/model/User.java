@@ -33,6 +33,7 @@ public class User {
     private String username;
     private LocalDateTime accountCreated;
     private LocalDateTime accountUpdated;
+    private boolean userVerified;
 
 
 }
