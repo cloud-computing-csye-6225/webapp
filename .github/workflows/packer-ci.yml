@@ -80,6 +80,8 @@ jobs:
           echo "spring.jpa.hibernate.ddl-auto=update" >> src/main/resources/application.properties
           echo "spring.jpa.show-sql=true" >> src/main/resources/application.properties
           echo "spring.jpa.open-in-view=false" >> src/main/resources/application.properties
+          echo "appconfig.baseurl=http://localhost:8080" >> src/main/resources/application.properties
+          
 
       # Maven build using environment variables for MySQL connection
       - name: Build with Maven
