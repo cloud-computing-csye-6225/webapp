@@ -141,9 +141,10 @@ jobs:
           fi
           echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
           echo "Extracted AMI_ID: ${AMI_ID}"
+
       - name: Use AMI ID
         run:
-          echo "Using AMI ID: ${{ env.AMI_ID }}"
+          echo "Using AMI ID: ${AMI_ID }"
 
       - name: Create New Launch Template Version
         id: create-launch-template
