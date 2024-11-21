@@ -141,10 +141,6 @@ jobs:
         run: |
           ls -al
 
-      - name: move output-ami-id.txt to root
-        run: |
-          mv ./packer/output-ami-id.txt ./output-ami-id.txt
-
       - name: Check AMI ID
         run: |
           cat output-ami-id.txt
