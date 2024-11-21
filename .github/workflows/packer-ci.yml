@@ -132,76 +132,64 @@ jobs:
           aws --version
           jq --version
 
-      - name: Extract Latest AMI ID
-        run: |
-          AMI_ID=$(packer build -machine-readable ./packer/packer.pkr.hcl | grep -E 'artifact.*:ami-' | cut -d, -f6 | tail -n 1)
-          if [[ -z "$AMI_ID" ]]; then
-            echo "Error: AMI_ID is empty or invalid" >&2
-            exit 1
-          fi
-          echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
-          echo "Extracted AMI_ID: ${AMI_ID}"
 
-      - name: Create New Launch Template Version
-        id: create-launch-template
-        run: |
-          NEW_LAUNCH_TEMPLATE=$(aws ec2 create-launch-template-version \
-            --launch-template-id ${{ secrets.LAUNCH_TEMPLATE_ID }} \
-            --source-version $LATEST_VERSION \
-            --version-description "Updated with new AMI ID" \
-            --launch-template-data '{"ImageId":"'"${AMI_ID}"'"}' \
-            --region ${{ secrets.AWS_REGION }})
-          echo "LAUNCH_TEMPLATE_VERSION=$(echo $NEW_LAUNCH_TEMPLATE | jq -r '.LaunchTemplateVersion.VersionNumber')" >> $GITHUB_ENV
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Update Autoscaling Group
-        run: |
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ secrets.AUTOSCALING_GROUP_NAME }} \
-            --launch-template "LaunchTemplateId=${{ secrets.LAUNCH_TEMPLATE_ID }},Version=${{ env.LAUNCH_TEMPLATE_VERSION }}" \
-            --region ${{ secrets.AWS_REGION }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+      - name: Build AMI with Packer
+        run: packer build -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
 
-      - name: Initiate Instance Refresh
-        id: instance-refresh
+      - name: List files in current directory
         run: |
-          REFRESH_ID=$(aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name ${{ secrets.AUTOSCALING_GROUP_NAME }} \
-            --region ${{ secrets.AWS_REGION }} \
-            --query "InstanceRefreshId" --output text)
-          echo "REFRESH_ID=${REFRESH_ID}" >> $GITHUB_ENV
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ls -al
 
-      - name: Wait for Instance Refresh to Complete
+      - name: move output-ami-id.txt to root
         run: |
-          while true; do
-            STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name ${{ secrets.AUTOSCALING_GROUP_NAME }} \
-              --region ${{ secrets.AWS_REGION }} \
-              --query "InstanceRefreshes[?InstanceRefreshId=='${{ env.REFRESH_ID }}'].Status" --output text)
-            if [[ "$STATUS" == "Successful" ]]; then
-              echo "Instance refresh successful."
-              break
-            elif [[ "$STATUS" == "Failed" ]]; then
-              echo "Instance refresh failed." >&2
+          mv ./packer/output-ami-id.txt ./output-ami-id.txt
+
+      - name: Check AMI ID
+        run: |
+          cat output-ami-id.txt
+
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+
+      - name: Create Launch Template Version
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+          ami_id=$(cat output-ami-id.txt)
+          aws ec2 create-launch-template-version --launch-template-name ${{ vars.LAUNCH_TEMPLATE_NAME }} --source-version '$Latest' --launch-template-data '{"ImageId": "'$ami_id'"}'
+
+      - name: Refresh Auto Scaling Group
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }}
+
+      - name: Wait for Instance Refresh
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+          completed="false"
+          while [ "$completed" != "true" ]; do
+            status=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --query 'InstanceRefreshes[0].Status' --output text)
+            if [ "$status" == "Successful" ]; then
+              completed="true"
+            elif [ "$status" == "Failed" ]; then
+              echo "Instance refresh failed"
               exit 1
             fi
-            echo "Waiting for instance refresh to complete..."
-            sleep 30
+            sleep 20
           done
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
 
 
