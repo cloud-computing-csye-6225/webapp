@@ -73,6 +73,8 @@ jobs:
           echo "spring.jpa.hibernate.ddl-auto=update" >> src/main/resources/application.properties
           echo "spring.jpa.show-sql=true" >> src/main/resources/application.properties
           echo "spring.jpa.open-in-view=false" >> src/main/resources/application.properties
+          echo "app.base-url=http://localhost:8080" >> src/main/resources/application.properties
+          echo "SNS_TOPIC_ARN=adfsdfasdasfsda" >> src/main/resources/application.properties
 
       - name: Build with Maven
         env:
@@ -115,5 +117,75 @@ jobs:
         working-directory: ./packer
         run: packer validate .
 
+
+      - name: Install AWS CLI and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli jq
+          aws --version
+          jq --version
+
       - name: Build AMI with Packer
         run: packer build -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
+
+      - name: List files in current directory
+        run: |
+          ls -al
+
+      - name: Check AMI ID
+        run: |
+          cat output-ami-id.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEMO_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEMO_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+
+      - name: Create Launch Template Version
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+          ami_id=$(cat output-ami-id.txt)
+          aws ec2 create-launch-template-version --launch-template-name ${{ vars.LAUNCH_TEMPLATE_NAME }} --source-version '$Latest' --launch-template-data '{"ImageId": "'$ami_id'"}'
+
+      - name: Refresh Auto Scaling Group
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }}
+
+      - name: Wait for Instance Refresh
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.DEMO_ACCESS_KEY_ID }} && \
+          aws configure set aws_secret_access_key ${{ secrets.DEMO_SECRET_ACCESS_KEY }} && \
+          aws configure set region ${{ secrets.AWS_REGION }} && \
+          aws configure set default.output_format json
+          completed="false"
+          while [ "$completed" != "true" ]; do
+            status=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --query 'InstanceRefreshes[0].Status' --output text)
+            if [ "$status" == "Successful" ]; then
+              completed="true"
+            elif [ "$status" == "Failed" ]; then
+              echo "Instance refresh failed"
+              exit 1
+            fi
+            sleep 20
+          done
+
