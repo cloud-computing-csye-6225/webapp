@@ -38,6 +38,11 @@ public class UserDto {
     private LocalDateTime accountUpdated;
 
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(description = "Email verification flag for the new users")
+    private boolean userVerified;
+
+
     // Getters and Setters
     public String getEmail() {
         return email;

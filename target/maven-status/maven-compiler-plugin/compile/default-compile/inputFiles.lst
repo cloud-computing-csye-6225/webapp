@@ -1,5 +1,6 @@
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/WebappApplication.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/config/AmazonConfig.java
+/Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/config/AppConfig.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/config/MetricsConfig.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/config/SwaggerConfig.java
 /Users/just_chakri/Documents/Git/webapp/src/main/java/com/webapp/controller/ImageController.java

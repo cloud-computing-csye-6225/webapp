@@ -1,10 +1,13 @@
 package com.webapp.service;
 
+import com.amazonaws.services.dynamodbv2.xspec.S;
 import com.webapp.dto.UserDto;
 import com.webapp.exception.UserNotAuthenticatedException;
 import com.webapp.model.User;
 import com.webapp.repository.UserRepository;
+import com.webapp.config.AppConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,6 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.model.PublishRequest;
+import com.amazonaws.services.sns.model.PublishResult;
+
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -36,6 +43,15 @@ public class UserService{
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AmazonSNSClient snsClient;
+
+    @Autowired
+    private AppConfig appConfig;
+    
+    @Value("${SNS_TOPIC_ARN}")
+    private String SNS_TOPIC_ARN;
+
 
 
 
@@ -56,7 +72,33 @@ public class UserService{
         user.setPassword(passwordEncoder.encode(password));
         user.setAccountCreated(LocalDateTime.now());
         user.setAccountUpdated(LocalDateTime.now());
+        user.setUserVerified(false);
         userRepository.save(user);
+
+        String verificationLink = generateVerificationLink(user);
+        publishToSns(email,user.getFirstName(), verificationLink);
+
+        logger.info("User created successfully and SNS message published for verification");
+    }
+
+    private String generateVerificationLink(User user) {
+        String baseUrl = appConfig.getBaseUrl();
+        return baseUrl +"/v1/user/verifyuser/"+user.getId();
+    }
+
+    private void publishToSns(String email, String firstName, String verificationLink) {
+        try {
+            String message = String.format("{\"email\":\"%s\",\"firstName\":\"%s\",\"verificationLink\":\"%s\"}",
+                    email, firstName, verificationLink);
+
+            PublishRequest publishRequest = new PublishRequest(SNS_TOPIC_ARN, message);
+            PublishResult publishResult = snsClient.publish(publishRequest);
+
+            logger.info("SNS message published successfully. Message ID: {}", publishResult.getMessageId());
+        } catch (Exception e) {
+            logger.error("Failed to publish message to SNS: {}", e.getMessage(), e);
+            throw new RuntimeException("Error publishing to SNS", e);
+        }
     }
 
     // Update User method
@@ -136,6 +178,10 @@ public class UserService{
         if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
             throw new UserNotAuthenticatedException("Invalid username or password");
         }
+        // Check if email is verified
+        if(user.isUserVerified() ==false){
+            throw new UserNotAuthenticatedException("Email not verified");
+        }
 
         // Return user after successful authentication
         return user;
@@ -146,6 +192,23 @@ public class UserService{
         String emailPattern = "[a-z0-9!#$%&\'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&\'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?";
         return email.matches(emailPattern);
     }
+
+    public void verifyUserById(Long id) {
+        // Find the user by ID
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user ID"));
+
+        // Check if already verified
+        if (user.isUserVerified()) {
+            throw new IllegalStateException("User is already verified");
+        }
+
+        // Update verification status
+        user.setUserVerified(true);
+        userRepository.save(user);
+    }
+
+
 
 
 }

@@ -183,4 +183,15 @@ build {
       "sudo systemctl start webapp"
     ]
   }
+
+  post-processor "manifest" {
+    output     = "manifest.json"
+    strip_path = true
+  }
+  post-processor "shell-local" {
+    inline = [
+      "ami_id=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d':' -f2 | cut -d',' -f1)",
+      "echo $ami_id > output-ami-id.txt"
+    ]
+  }
 }

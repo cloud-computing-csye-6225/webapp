@@ -132,13 +132,15 @@ public class UserController {
 
             User foundUser = userService.getUserByAuthorization(authorization);
 
+            UserDto foundUserDto = userService.getUser(foundUser.getEmail(), foundUser.getFirstName(), foundUser.getLastName());
+
             long duration = System.currentTimeMillis() - startTime;
             statsDClient.recordExecutionTime("api.user.get.duration", duration);
-            return ResponseHandler.generateSuccessResponse(foundUser, HttpStatus.OK);
+            return ResponseHandler.generateSuccessResponse(foundUserDto, HttpStatus.OK);
 
         } catch (UserNotAuthenticatedException e) {
             logger.warn("Unauthorized access attempt: {}", e.getMessage());
-            return ResponseHandler.generateErrorResponse("Unauthorized access", HttpStatus.UNAUTHORIZED);
+            return ResponseHandler.generateErrorResponse("Unauthorized access: "+e.getMessage(), HttpStatus.UNAUTHORIZED);
         } catch (NoSuchElementException e) {
             logger.warn("User not found: {}", e.getMessage());
             return ResponseHandler.generateErrorResponse("User not found", HttpStatus.NOT_FOUND);
@@ -165,5 +167,40 @@ public class UserController {
             }
         }
         return true;
+    }
+
+    @Operation(summary = "Verify a user")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User verified successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid user ID"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "409", description = "User already verified"),
+            @ApiResponse(responseCode = "503", description = "Service unavailable")
+    })
+    @GetMapping("/verifyuser/{id}")
+    public ResponseEntity<?> verifyUser(@PathVariable Long id) {
+        long startTime = System.currentTimeMillis();
+        statsDClient.incrementCounter("api.user.verify.count");
+
+        try {
+            userService.verifyUserById(id);
+
+            long duration = System.currentTimeMillis() - startTime;
+            statsDClient.recordExecutionTime("api.user.verify.duration", duration);
+
+            return ResponseHandler.generateResponse("User successfully verified!", HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid user ID: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (NoSuchElementException e) {
+            logger.warn("User not found: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("User not found", HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            logger.warn("User already verified: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse(e.getMessage(), HttpStatus.CONFLICT);
+        } catch (Exception e) {
+            logger.error("Error verifying user: {}", e.getMessage());
+            return ResponseHandler.generateErrorResponse("Service unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+        }
     }
 }
