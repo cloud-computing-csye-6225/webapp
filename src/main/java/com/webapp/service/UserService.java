@@ -7,6 +7,7 @@ import com.webapp.model.User;
 import com.webapp.repository.UserRepository;
 import com.webapp.config.AppConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -47,8 +48,9 @@ public class UserService{
 
     @Autowired
     private AppConfig appConfig;
-
-    private static final String SNS_TOPIC_ARN = System.getenv("SNS_TOPIC_ARN");
+    
+    @Value("${SNS_TOPIC_ARN}")
+    private String SNS_TOPIC_ARN;
 
 
 
@@ -86,7 +88,7 @@ public class UserService{
 
     private void publishToSns(String email, String firstName, String verificationLink) {
         try {
-            String message = String.format("{\"email\":\"%s\",\"userId\":\"%d\",\"verificationLink\":\"%s\"}",
+            String message = String.format("{\"email\":\"%s\",\"firstName\":\"%s\",\"verificationLink\":\"%s\"}",
                     email, firstName, verificationLink);
 
             PublishRequest publishRequest = new PublishRequest(SNS_TOPIC_ARN, message);

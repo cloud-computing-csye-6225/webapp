@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.Random;
 
 import java.time.LocalDateTime;
 @Getter
@@ -18,7 +19,7 @@ import java.time.LocalDateTime;
 @Entity
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", unique = true, nullable = false, updatable = false)
     private long id;
 
     @Column(unique = true)
@@ -34,6 +35,16 @@ public class User {
     private LocalDateTime accountCreated;
     private LocalDateTime accountUpdated;
     private boolean userVerified;
+
+    @PrePersist
+    public void generateUniqueId() {
+        if (this.id == 0) {
+            this.id = new Random().nextLong();
+            if (this.id < 0) {
+                this.id = -this.id;
+            }
+        }
+    }
 
 
 }
