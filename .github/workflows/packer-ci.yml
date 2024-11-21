@@ -114,6 +114,14 @@ jobs:
       - name: Validate Packer template
         run: packer validate -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
 
+      - name: Install AWS CLI and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli jq
+          aws --version
+          jq --version
+
+
 
       - name: Build AMI with Packer
         run: packer build -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
