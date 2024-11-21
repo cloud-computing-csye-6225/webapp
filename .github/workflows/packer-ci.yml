@@ -132,18 +132,18 @@ jobs:
           aws --version
           jq --version
 
-
-
-      - name: Build AMI with Packer
-        run: packer build -var-file=packer/variables.pkrvars.hcl packer/packer.pkr.hcl
-
       - name: Extract Latest AMI ID
-        id: extract-ami-id
         run: |
-          AMI_ID=$(packer build -machine-readable ./packer/packer.pkr.hcl | grep -E 'artifact.*id' | cut -d, -f6)
+          AMI_ID=$(packer build -machine-readable ./packer/packer.pkr.hcl | grep -E 'artifact.*:ami-' | cut -d, -f6 | tail -n 1)
+          if [[ -z "$AMI_ID" ]]; then
+            echo "Error: AMI_ID is empty or invalid" >&2
+            exit 1
+          fi
           echo "AMI_ID=${AMI_ID}" >> $GITHUB_ENV
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          echo "Extracted AMI_ID: ${AMI_ID}"
+      - name: Use AMI ID
+        run:
+          echo "Using AMI ID: ${{ env.AMI_ID }}"
 
       - name: Create New Launch Template Version
         id: create-launch-template
