@@ -20,8 +20,8 @@ public class AmazonConfig {
 
         return AmazonS3ClientBuilder.standard()
                 .withRegion(clientRegion)
-                .withCredentials(new ProfileCredentialsProvider("dev"))
-                //.withCredentials(new InstanceProfileCredentialsProvider(false))
+                //.withCredentials(new ProfileCredentialsProvider("dev"))
+                .withCredentials(new InstanceProfileCredentialsProvider(false))
                 .build();
     }
 
@@ -29,8 +29,8 @@ public class AmazonConfig {
     public AmazonSNSClient snsClient() {
         return (AmazonSNSClient) AmazonSNSClient.builder()
                 .withRegion(clientRegion)
-                .withCredentials(new ProfileCredentialsProvider("dev"))
-                //.withCredentials(new InstanceProfileCredentialsProvider(false))
+                //.withCredentials(new ProfileCredentialsProvider("dev"))
+                .withCredentials(new InstanceProfileCredentialsProvider(false))
                 .build();
     }
 }
