@@ -46,7 +46,7 @@ public class UserService{
     @Autowired
     private AmazonSNSClient snsClient;
 
-    @Autowired
+    @Value("${app.base-url}")
     private AppConfig appConfig;
     
     @Value("${SNS_TOPIC_ARN}")
